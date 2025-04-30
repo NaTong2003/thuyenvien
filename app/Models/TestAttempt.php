@@ -20,6 +20,8 @@ class TestAttempt extends Model
         'start_time',
         'end_time',
         'is_completed',
+        'needs_marking',
+        'is_marked',
         'score',
     ];
 
@@ -32,6 +34,8 @@ class TestAttempt extends Model
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'is_completed' => 'boolean',
+        'needs_marking' => 'boolean',
+        'is_marked' => 'boolean',
         'score' => 'float',
     ];
 

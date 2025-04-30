@@ -319,7 +319,7 @@
                     <div class="mb-3">
                         <div class="progress">
                             <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ $accuracy }}%" 
+                                 style="width: {{ $accuracy }}%"
                                  aria-valuenow="{{ $accuracy }}" 
                                  aria-valuemin="0" 
                                  aria-valuemax="100">

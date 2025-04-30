@@ -328,12 +328,113 @@
                                     </div>
                                 @elseif($question->type == 'Tình huống')
                                     <div class="mb-3">
+                                        @php
+                                            $situationResponse = $userResponse ? json_decode($userResponse->text_response, true) : null;
+                                        @endphp
+                                        
                                         <p><strong>Phân tích tình huống của bạn:</strong></p>
-                                        <div class="card">
+                                        <div class="card mb-3">
                                             <div class="card-body">
-                                                {{ $userResponse ? $userResponse->text_response : 'Không có câu trả lời' }}
+                                                {{ $situationResponse ? ($situationResponse['analysis'] ?? 'Không có phân tích') : 'Không có câu trả lời' }}
                                             </div>
                                         </div>
+                                        
+                                        <p><strong>Giải pháp đề xuất của bạn:</strong></p>
+                                        <div class="card">
+                                            <div class="card-body">
+                                                {{ $situationResponse ? ($situationResponse['solution'] ?? 'Không có giải pháp đề xuất') : 'Không có câu trả lời' }}
+                                            </div>
+                                        </div>
+                                        
+                                        @if($userResponse && !is_null($userResponse->score))
+                                            <div class="alert alert-info mt-3">
+                                                <p class="mb-0"><strong>Điểm: {{ $userResponse->score }}/1.0</strong></p>
+                                                @if($userResponse->admin_comment)
+                                                    <p class="mt-2 mb-0"><strong>Nhận xét của giám khảo:</strong> {{ $userResponse->admin_comment }}</p>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <div class="alert alert-warning mt-3">
+                                                <p class="mb-0">Câu trả lời này đang chờ chấm điểm.</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @elseif($question->type == 'Thực hành')
+                                    <div class="mb-3">
+                                        @php
+                                            $practicalResponse = $userResponse ? json_decode($userResponse->text_response, true) : null;
+                                        @endphp
+                                        
+                                        <p><strong>Quy trình thực hiện của bạn:</strong></p>
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                {{ $practicalResponse ? ($practicalResponse['process'] ?? 'Không có mô tả quy trình') : 'Không có câu trả lời' }}
+                                            </div>
+                                        </div>
+                                        
+                                        <p><strong>Kết quả đạt được:</strong></p>
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                {{ $practicalResponse ? ($practicalResponse['result'] ?? 'Không có kết quả') : 'Không có câu trả lời' }}
+                                            </div>
+                                        </div>
+                                        
+                                        @if($practicalResponse && isset($practicalResponse['evidence_file']) && $practicalResponse['evidence_file'])
+                                            <p><strong>Bằng chứng đính kèm:</strong></p>
+                                            <div class="card mb-3">
+                                                <div class="card-body">
+                                                    <a href="{{ asset('storage/' . $practicalResponse['evidence_file']) }}" target="_blank" class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-file-download me-1"></i> Tải file bằng chứng
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        @endif
+                                        
+                                        @if($userResponse && !is_null($userResponse->score))
+                                            <div class="alert alert-info mt-3">
+                                                <p class="mb-0"><strong>Điểm: {{ $userResponse->score }}/1.0</strong></p>
+                                                @if($userResponse->admin_comment)
+                                                    <p class="mt-2 mb-0"><strong>Nhận xét của giám khảo:</strong> {{ $userResponse->admin_comment }}</p>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <div class="alert alert-warning mt-3">
+                                                <p class="mb-0">Câu trả lời này đang chờ chấm điểm.</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @elseif($question->type == 'Mô phỏng')
+                                    <div class="mb-3">
+                                        @php
+                                            $simulationResponse = $userResponse ? json_decode($userResponse->text_response, true) : null;
+                                        @endphp
+                                        
+                                        <p><strong>Các bước bạn đã thực hiện:</strong></p>
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                {{ $simulationResponse ? ($simulationResponse['steps'] ?? 'Không có mô tả các bước') : 'Không có câu trả lời' }}
+                                            </div>
+                                        </div>
+                                        
+                                        <p><strong>Kết quả mô phỏng:</strong></p>
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                {{ $simulationResponse ? ($simulationResponse['result'] ?? 'Không có kết quả') : 'Không có câu trả lời' }}
+                                            </div>
+                                        </div>
+                                        
+                                        @if($userResponse && !is_null($userResponse->score))
+                                            <div class="alert alert-info mt-3">
+                                                <p class="mb-0"><strong>Điểm: {{ $userResponse->score }}/1.0</strong></p>
+                                                @if($userResponse->admin_comment)
+                                                    <p class="mt-2 mb-0"><strong>Nhận xét của giám khảo:</strong> {{ $userResponse->admin_comment }}</p>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <div class="alert alert-warning mt-3">
+                                                <p class="mb-0">Câu trả lời này đang chờ chấm điểm.</p>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
                                 

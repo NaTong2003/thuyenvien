@@ -27,9 +27,15 @@
         </a>
     </li>
     <li class="nav-item">
-        <a href="{{ route('admin.reports.index') }}" class="nav-link {{ request()->routeIs('admin.reports*') ? 'active' : '' }}">
+        <a href="{{ route('admin.reports.index') }}" class="nav-link {{ request()->routeIs('admin.reports.index') || request()->routeIs('admin.reports.performance') || request()->routeIs('admin.reports.test') || request()->routeIs('admin.reports.seafarer') || request()->routeIs('admin.reports.attempt') ? 'active' : '' }}">
             <i class="fas fa-chart-bar"></i>
             Báo cáo & Thống kê
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="{{ route('admin.reports.marking') }}" class="nav-link {{ request()->routeIs('admin.reports.marking') || request()->routeIs('admin.reports.mark.attempt') ? 'active' : '' }}">
+            <i class="fas fa-pen"></i>
+            Chấm điểm bài thi
         </a>
     </li>
 </ul>

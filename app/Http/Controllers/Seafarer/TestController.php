@@ -334,6 +334,7 @@ class TestController extends Controller
         // Tính điểm
         $totalQuestions = $testQuestions->count();
         $correctAnswers = 0;
+        $hasSubjectiveQuestions = false; // Biến kiểm tra có câu hỏi cần chấm thủ công không
         
         // Lưu câu trả lời của người dùng
         foreach ($request->input('responses', []) as $questionId => $responseData) {
@@ -362,8 +363,8 @@ class TestController extends Controller
                         $correctAnswers++;
                     }
                 }
-            } elseif ($question->type == 'Tự luận' || $question->type == 'Tình huống' || $question->type == 'Thực hành') {
-                // Câu hỏi tự luận hoặc tình huống
+            } elseif ($question->type == 'Tự luận') {
+                // Câu hỏi tự luận
                 $textResponse = $responseData['text_response'] ?? null;
                 
                 if ($textResponse) {
@@ -374,16 +375,122 @@ class TestController extends Controller
                         'answer_id' => null,
                         'text_response' => $textResponse,
                         'is_marked' => false,
-                        'score' => null, // Cần đánh giá bởi admin
+                        'score' => 0, // Giá trị mặc định, sẽ được cập nhật sau khi admin chấm điểm
                     ]);
+                    
+                    $hasSubjectiveQuestions = true;
+                }
+            } elseif ($question->type == 'Tình huống') {
+                // Câu hỏi tình huống
+                $textResponse = $responseData['text_response'] ?? null;
+                $solutionResponse = $responseData['solution_response'] ?? null;
+                
+                // Kết hợp phân tích và giải pháp vào một chuỗi JSON để lưu trữ
+                $combinedResponse = [
+                    'analysis' => $textResponse,
+                    'solution' => $solutionResponse
+                ];
+                
+                if ($textResponse || $solutionResponse) {
+                    // Tạo câu trả lời của người dùng
+                    UserResponse::create([
+                        'test_attempt_id' => $attempt->id,
+                        'question_id' => $questionId,
+                        'answer_id' => null,
+                        'text_response' => json_encode($combinedResponse),
+                        'is_marked' => false,
+                        'score' => 0, // Giá trị mặc định, sẽ được cập nhật sau khi admin chấm điểm
+                        'response_type' => 'situation', // Thêm trường để phân biệt loại câu trả lời
+                    ]);
+                    
+                    $hasSubjectiveQuestions = true;
+                }
+            } elseif ($question->type == 'Thực hành') {
+                // Câu hỏi thực hành
+                $processResponse = $responseData['process_response'] ?? null;
+                $resultResponse = $responseData['result_response'] ?? null;
+                
+                // Xử lý upload file bằng chứng nếu có
+                $evidenceFilePath = null;
+                if ($request->hasFile("responses.{$questionId}.evidence_file")) {
+                    $file = $request->file("responses.{$questionId}.evidence_file");
+                    $filename = time() . '_' . $file->getClientOriginalName();
+                    $evidenceFilePath = $file->storeAs('evidence_files', $filename, 'public');
+                }
+                
+                // Kết hợp các phản hồi vào một chuỗi JSON
+                $combinedResponse = [
+                    'process' => $processResponse,
+                    'result' => $resultResponse,
+                    'evidence_file' => $evidenceFilePath
+                ];
+                
+                if ($processResponse || $resultResponse) {
+                    // Tạo câu trả lời của người dùng
+                    UserResponse::create([
+                        'test_attempt_id' => $attempt->id,
+                        'question_id' => $questionId,
+                        'answer_id' => null,
+                        'text_response' => json_encode($combinedResponse),
+                        'is_marked' => false,
+                        'score' => 0, // Giá trị mặc định, sẽ được cập nhật sau khi admin chấm điểm
+                        'response_type' => 'practical', // Thêm trường để phân biệt loại câu trả lời
+                    ]);
+                    
+                    $hasSubjectiveQuestions = true;
+                }
+            } elseif ($question->type == 'Mô phỏng') {
+                // Câu hỏi mô phỏng
+                $stepsResponse = $responseData['steps_response'] ?? null;
+                $simulationResult = $responseData['simulation_result'] ?? null;
+                
+                // Kết hợp các phản hồi vào một chuỗi JSON
+                $combinedResponse = [
+                    'steps' => $stepsResponse,
+                    'result' => $simulationResult
+                ];
+                
+                if ($stepsResponse || $simulationResult) {
+                    // Tạo câu trả lời của người dùng
+                    UserResponse::create([
+                        'test_attempt_id' => $attempt->id,
+                        'question_id' => $questionId,
+                        'answer_id' => null,
+                        'text_response' => json_encode($combinedResponse),
+                        'is_marked' => false,
+                        'score' => 0, // Giá trị mặc định, sẽ được cập nhật sau khi admin chấm điểm
+                        'response_type' => 'simulation', // Thêm trường để phân biệt loại câu trả lời
+                    ]);
+                    
+                    $hasSubjectiveQuestions = true;
                 }
             }
         }
         
         // Tính điểm nếu không có câu hỏi tự luận (chấm tự động)
         if ($totalQuestions > 0) {
-            $score = ($correctAnswers / $totalQuestions) * 100;
-            $attempt->score = round($score, 2);
+            if (!$hasSubjectiveQuestions) {
+                // Nếu chỉ có câu hỏi trắc nghiệm, tính điểm ngay
+                $score = ($correctAnswers / $totalQuestions) * 100;
+                $attempt->score = round($score, 2);
+                $attempt->is_marked = true; // Đã chấm điểm xong
+            } else {
+                // Nếu có câu hỏi tự luận, tạm tính điểm dựa trên câu trắc nghiệm
+                $objQuestions = $testQuestions->filter(function($tq) {
+                    return isset($tq->question) && $tq->question->type == 'Trắc nghiệm';
+                })->count();
+                
+                if ($objQuestions > 0) {
+                    // Tạm tính điểm các câu trắc nghiệm
+                    $score = ($correctAnswers / $objQuestions) * 100 * ($objQuestions / $totalQuestions);
+                    $attempt->score = round($score, 2);
+                } else {
+                    $attempt->score = 0; // Điểm tạm thời
+                }
+                
+                $attempt->is_marked = false; // Cần chấm điểm thủ công
+                $attempt->needs_marking = true; // Đánh dấu cần chấm điểm
+            }
         }
         
         $attempt->save();

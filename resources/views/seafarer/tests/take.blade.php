@@ -158,10 +158,60 @@
                                             </div>
                                         @elseif($question->type == 'Tình huống')
                                             <div class="mb-3">
+                                                <label class="form-label">Phân tích tình huống:</label>
                                                 <textarea class="form-control answer-input" 
                                                     name="responses[{{ $question->id }}][text_response]" 
                                                     rows="5" 
-                                                    placeholder="Nhập phân tích tình huống của bạn..."
+                                                    placeholder="Phân tích tình huống này..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                                
+                                                <label class="form-label mt-3">Giải pháp đề xuất:</label>
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][solution_response]" 
+                                                    rows="5" 
+                                                    placeholder="Đề xuất giải pháp của bạn..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                            </div>
+                                        @elseif($question->type == 'Thực hành')
+                                            <div class="mb-3">
+                                                <label class="form-label">Mô tả quy trình thực hiện:</label>
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][process_response]" 
+                                                    rows="5" 
+                                                    placeholder="Mô tả các bước thực hiện..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                                
+                                                <label class="form-label mt-3">Kết quả đạt được:</label>
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][result_response]" 
+                                                    rows="3" 
+                                                    placeholder="Mô tả kết quả đạt được..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                                
+                                                <label class="form-label mt-3">Đính kèm bằng chứng (nếu có):</label>
+                                                <input type="file" class="form-control" 
+                                                    name="responses[{{ $question->id }}][evidence_file]"
+                                                    data-question="{{ $index + 1 }}">
+                                                <small class="text-muted">Hỗ trợ file hình ảnh (.jpg, .png) hoặc PDF, tối đa 10MB</small>
+                                            </div>
+                                        @elseif($question->type == 'Mô phỏng')
+                                            <div class="mb-3">
+                                                <div class="alert alert-info">
+                                                    <i class="fas fa-info-circle me-2"></i> Hãy thực hiện mô phỏng theo yêu cầu đề bài, sau đó ghi lại các bước và kết quả bạn đã thực hiện.
+                                                </div>
+                                                
+                                                <label class="form-label">Các bước đã thực hiện:</label>
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][steps_response]" 
+                                                    rows="5" 
+                                                    placeholder="Liệt kê các bước bạn đã thực hiện..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                                
+                                                <label class="form-label mt-3">Kết quả đạt được:</label>
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][simulation_result]" 
+                                                    rows="3" 
+                                                    placeholder="Mô tả kết quả mô phỏng..."
                                                     data-question="{{ $index + 1 }}"></textarea>
                                             </div>
                                         @endif

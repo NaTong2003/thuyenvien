@@ -13,6 +13,7 @@ use App\Models\Question;
 use App\Models\TestQuestion;
 use App\Models\Role;
 use Illuminate\Support\Facades\DB;
+use App\Models\UserResponse;
 
 class ReportController extends Controller
 {
@@ -299,45 +300,168 @@ class ReportController extends Controller
     /**
      * Hiển thị báo cáo chi tiết cho một lần làm bài kiểm tra
      */
-    public function attemptReport($attemptId)
+    public function attemptReport($id)
     {
-        $testAttempt = TestAttempt::with(['user', 'test', 'userResponses.question', 'userResponses.answer'])
-                            ->findOrFail($attemptId);
+        $attempt = TestAttempt::with(['test', 'user', 'userResponses.question', 'userResponses.answer'])
+                              ->findOrFail($id);
         
-        // Lấy thông tin người dùng và bài kiểm tra
-        $user = $testAttempt->user;
-        $test = $testAttempt->test;
-        
-        // Tính toán số liệu
-        $totalQuestions = $testAttempt->userResponses->count();
-        $correctAnswers = $testAttempt->userResponses->filter(function($response) {
-            return $response->answer && $response->answer->is_correct;
-        })->count();
-        
-        $incorrectAnswers = $totalQuestions - $correctAnswers;
-        $accuracy = $totalQuestions > 0 ? round(($correctAnswers / $totalQuestions) * 100, 1) : 0;
-        
-        // Kiểm tra trạng thái đạt hay không đạt
-        $isPassed = $testAttempt->score >= $test->passing_score;
+        // Tính toán thông tin bổ sung cần thiết cho view
+        $test = $attempt->test;
+        $user = $attempt->user;
+        $testAttempt = $attempt;
         
         // Tính thời gian làm bài
         $duration = null;
-        if ($testAttempt->started_at && $testAttempt->completed_at) {
-            $startTime = strtotime($testAttempt->started_at);
-            $endTime = strtotime($testAttempt->completed_at);
-            $duration = round(($endTime - $startTime) / 60); // Thời gian tính bằng phút
+        if ($attempt->start_time && $attempt->end_time) {
+            $duration = $attempt->start_time->diffInMinutes($attempt->end_time);
         }
         
+        // Đếm số câu trả lời đúng và sai
+        $correctAnswers = 0;
+        $incorrectAnswers = 0;
+        
+        foreach ($attempt->userResponses as $response) {
+            if ($response->isCorrect()) {
+                $correctAnswers++;
+            } else {
+                $incorrectAnswers++;
+            }
+        }
+        
+        // Tính độ chính xác
+        $totalAnswers = $correctAnswers + $incorrectAnswers;
+        $accuracy = ($totalAnswers > 0) ? round(($correctAnswers / $totalAnswers) * 100, 1) : 0;
+        
+        // Kiểm tra trạng thái đạt/không đạt
+        $isPassed = ($attempt->score >= $test->passing_score);
+        
         return view('admin.reports.attempt_detail', compact(
-            'testAttempt',
-            'user',
-            'test',
-            'totalQuestions',
-            'correctAnswers',
-            'incorrectAnswers',
-            'accuracy',
+            'attempt', 
+            'test', 
+            'user', 
+            'testAttempt', 
+            'correctAnswers', 
+            'incorrectAnswers', 
+            'accuracy', 
             'isPassed',
             'duration'
         ));
+    }
+    
+    /**
+     * Hiển thị trang chấm điểm bài thi có câu hỏi tự luận
+     */
+    public function markingPage(Request $request)
+    {
+        // Lấy danh sách bài thi cần chấm điểm
+        $query = TestAttempt::where('needs_marking', true)
+                         ->with(['test', 'user']);
+                         
+        // Xử lý tìm kiếm
+        if ($request->has('search') && !empty($request->search)) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('user', function($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', '%' . $search . '%');
+                })
+                ->orWhere('id', 'like', '%' . $search . '%')
+                ->orWhereHas('test', function($testQuery) use ($search) {
+                    $testQuery->where('title', 'like', '%' . $search . '%');
+                });
+            });
+        }
+        
+        $attempts = $query->orderBy('created_at', 'desc')
+                          ->paginate(10);
+        
+        // Nếu có thông báo đã chấm điểm thành công, lưu số lượng vào session
+        if (session('success') && strpos(session('success'), 'chấm điểm') !== false) {
+            session(['recently_marked_count' => session('recently_marked_count', 0) + 1]);
+        }
+        
+        return view('admin.reports.marking', compact('attempts'));
+    }
+    
+    /**
+     * Hiển thị chi tiết bài thi để chấm điểm
+     */
+    public function markAttempt($id)
+    {
+        $attempt = TestAttempt::with(['test', 'user', 'userResponses.question'])
+                             ->findOrFail($id);
+        
+        // Lấy các câu trả lời cần chấm điểm (tự luận, tình huống, thực hành, mô phỏng)
+        $subjectiveResponses = $attempt->userResponses()
+                                    ->whereNull('score')
+                                    ->whereHas('question', function($query) {
+                                        $query->whereIn('type', ['Tự luận', 'Tình huống', 'Thực hành', 'Mô phỏng']);
+                                    })
+                                    ->with('question')
+                                    ->get();
+        
+        return view('admin.reports.mark_attempt', compact('attempt', 'subjectiveResponses'));
+    }
+    
+    /**
+     * Lưu điểm cho bài thi
+     */
+    public function saveMarking(Request $request, $id)
+    {
+        $attempt = TestAttempt::findOrFail($id);
+        
+        DB::beginTransaction();
+        
+        try {
+            $scores = $request->input('scores', []);
+            $comments = $request->input('comments', []);
+            $totalScore = 0;
+            $totalQuestionsCount = 0;
+            
+            // Lưu điểm cho từng câu hỏi
+            foreach ($scores as $responseId => $score) {
+                $userResponse = UserResponse::findOrFail($responseId);
+                $userResponse->score = $score;
+                $userResponse->admin_comment = $comments[$responseId] ?? null;
+                $userResponse->is_marked = true;
+                $userResponse->save();
+                
+                $totalScore += $score;
+                $totalQuestionsCount++;
+            }
+            
+            // Lấy tất cả các câu trả lời và tính tổng điểm
+            $allResponses = $attempt->userResponses;
+            $totalPoints = $allResponses->count();
+            $markedPoints = 0;
+            
+            foreach ($allResponses as $response) {
+                if (!is_null($response->score)) {
+                    $markedPoints += $response->score;
+                }
+            }
+            
+            // Kiểm tra xem đã chấm hết câu hỏi chưa
+            $pendingResponses = $attempt->userResponses()->whereNull('score')->count();
+            
+            if ($pendingResponses == 0) {
+                // Đã chấm hết, tính điểm tổng
+                $finalScore = ($markedPoints / $totalPoints) * 100;
+                $attempt->score = round($finalScore, 2);
+                $attempt->is_marked = true;
+                $attempt->needs_marking = false;
+            }
+            
+            $attempt->save();
+            
+            DB::commit();
+            
+            return redirect()->route('admin.reports.marking')
+                             ->with('success', 'Đã chấm điểm thành công!');
+                             
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                             ->with('error', 'Đã xảy ra lỗi khi chấm điểm: ' . $e->getMessage());
+        }
     }
 }

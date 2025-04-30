@@ -62,6 +62,11 @@ Route::prefix('admin')->middleware(['auth', 'isAdmin'])->name('admin.')->group(f
     Route::get('/reports/test/{test}', [ReportController::class, 'testReport'])->name('reports.test');
     Route::get('/reports/seafarer/{user}', [ReportController::class, 'seafarerReport'])->name('reports.seafarer');
     Route::get('/reports/attempt/{testAttempt}', [ReportController::class, 'attemptReport'])->name('reports.attempt');
+    
+    // Chấm điểm bài thi
+    Route::get('/marking', [ReportController::class, 'markingPage'])->name('reports.marking');
+    Route::get('/marking/{attempt}', [ReportController::class, 'markAttempt'])->name('reports.mark.attempt');
+    Route::post('/marking/{attempt}', [ReportController::class, 'saveMarking'])->name('reports.save.marking');
 });
 
 // Routes cho Thuyền viên

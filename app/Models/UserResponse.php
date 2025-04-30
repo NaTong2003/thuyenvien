@@ -19,8 +19,10 @@ class UserResponse extends Model
         'question_id',
         'answer_id',
         'text_response',
+        'response_type',
         'is_marked',
         'score',
+        'admin_comment',
     ];
 
     /**
@@ -31,6 +33,8 @@ class UserResponse extends Model
     protected $casts = [
         'is_marked' => 'boolean',
         'score' => 'float',
+        'response_type' => 'string',
+        'admin_comment' => 'string',
     ];
 
     /**

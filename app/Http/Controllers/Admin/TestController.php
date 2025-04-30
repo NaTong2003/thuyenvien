@@ -136,7 +136,7 @@ class TestController extends Controller
      */
     public function show($id)
     {
-        $test = Test::with(['position', 'shipType', 'questions.question', 'testAttempts.user'])
+        $test = Test::with(['position', 'shipType', 'testAttempts.user'])
                      ->findOrFail($id);
         
         // Sắp xếp các câu hỏi theo thứ tự
