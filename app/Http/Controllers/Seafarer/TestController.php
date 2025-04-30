@@ -11,6 +11,7 @@ use App\Models\Answer;
 use App\Models\UserResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\TestQuestion;
 
@@ -118,14 +119,20 @@ class TestController extends Controller
      */
     public function start($id)
     {
-        // Lấy bài kiểm tra kèm theo các câu hỏi và đáp án
-        $test = Test::findOrFail($id);
+        // Lấy bài kiểm tra kèm theo các câu hỏi và đáp án (thêm eager loading để lấy cả câu hỏi qua relationship)
+        $test = Test::with(['questions' => function($q) {
+                    $q->with('answers');
+                }])->findOrFail($id);
         
         // Kiểm tra xem bài kiểm tra có được kích hoạt không
         if (!$test->is_active) {
             return redirect()->route('seafarer.tests.index')
                             ->with('error', 'Bài kiểm tra này hiện không khả dụng.');
         }
+        
+        // Log thông tin để debug
+        Log::info('Test ID: ' . $test->id);
+        Log::info('Test Questions Count (từ relationship): ' . $test->questions->count());
         
         // Tạo một lượt thi mới
         $attempt = TestAttempt::create([
@@ -160,15 +167,19 @@ class TestController extends Controller
             }
             
             // Lọc theo danh mục nếu có
-            if ($test->category) {
+            if ($test->category_id) {
+                $query->where('category_id', $test->category_id);
+            } else if ($test->category) {
                 $query->where('category', $test->category);
             }
             
             // Lấy ngẫu nhiên số lượng câu hỏi cần thiết
+            $randomQuestionsCount = $test->random_questions_count ?? 10;
             $randomQuestions = $query->inRandomOrder()
-                                    ->limit($test->random_questions_count ?? 10)
+                                    ->limit($randomQuestionsCount)
                                     ->get();
             
+       
             // Tạo các bản ghi TestQuestion tạm thời cho lần thi này
             foreach ($randomQuestions as $index => $question) {
                 TestQuestion::create([
@@ -179,22 +190,108 @@ class TestController extends Controller
                     'test_attempt_id' => $attempt->id // Thêm trường để biết đây là câu hỏi tạm cho lần thi nào
                 ]);
             }
+            
+            // Lấy lại thông tin câu hỏi tạm thời cho bài kiểm tra ngẫu nhiên
+            $testQuestions = TestQuestion::where('test_id', $test->id)
+                            ->where('test_attempt_id', $attempt->id)
+                            ->where('is_temporary', true)
+                            ->with(['question' => function($q) {
+                                $q->with('answers');
+                            }])
+                            ->orderBy('order')
+                            ->get();
+                            
+            Log::info('Random Test Questions Count: ' . $testQuestions->count());
+        } else {
+            // Đối với bài kiểm tra cố định, lấy thông tin từ bảng test_questions
+            $testQuestions = TestQuestion::where('test_id', $test->id)
+                            ->where(function($query) {
+                                $query->where('is_temporary', false)
+                                      ->orWhereNull('is_temporary');
+                            })
+                            ->with(['question' => function($q) {
+                                $q->with('answers');
+                            }])
+                            ->orderBy('order')
+                            ->get();
+                            
+            Log::info('Fixed Test Questions Count (từ TestQuestion): ' . $testQuestions->count());
+            
+            // Nếu không tìm thấy câu hỏi trong bảng test_questions, thử lấy từ relationship
+            if ($testQuestions->count() == 0 && $test->questions->count() > 0) {
+                // Tạo dữ liệu cho bảng test_questions dựa vào relationship
+                foreach ($test->questions as $index => $question) {
+                    TestQuestion::updateOrCreate(
+                        ['test_id' => $test->id, 'question_id' => $question->id],
+                        ['order' => $index + 1, 'points' => 1]
+                    );
+                }
+                
+                // Lấy lại danh sách câu hỏi
+                $testQuestions = TestQuestion::where('test_id', $test->id)
+                            ->where(function($query) {
+                                $query->where('is_temporary', false)
+                                      ->orWhereNull('is_temporary');
+                            })
+                            ->with(['question' => function($q) {
+                                $q->with('answers');
+                            }])
+                            ->orderBy('order')
+                            ->get();
+                            
+                Log::info('Fixed Test Questions Count (sau khi tạo): ' . $testQuestions->count());
+            }
         }
         
-        // Lấy các câu hỏi từ pivot table test_questions
-        $testQuestions = TestQuestion::where('test_id', $test->id)
-                        ->when($test->is_random, function($query) use ($attempt) {
-                            // Nếu là bài kiểm tra ngẫu nhiên, chỉ lấy câu hỏi tạm thời cho lần thi này
-                            return $query->where('test_attempt_id', $attempt->id);
-                        })
-                        ->with(['question' => function($q) {
-                            $q->with('answers');
-                        }])
-                        ->orderBy('order')
-                        ->get();
+        // Kiểm tra xem có câu hỏi nào không (sau khi xử lý cả hai trường hợp)
+        if ($testQuestions->count() == 0) {
+            // Kiểm tra xem có bị lỗi khi lấy dữ liệu không
+            $directCount = DB::table('test_questions')
+                            ->where('test_id', $test->id)
+                            ->count();
+                            
+            Log::info('Direct DB Test Questions Count: ' . $directCount);
+            
+            if ($directCount > 0) {
+                // Có dữ liệu trong DB nhưng không lấy được qua model, thử cách khác
+                $questionsRaw = DB::table('test_questions')
+                                ->where('test_id', $test->id)
+                                ->pluck('question_id')
+                                ->toArray();
+                                
+                $questions = Question::whereIn('id', $questionsRaw)
+                            ->with('answers')
+                            ->get();
+                            
+                Log::info('Questions Count (từ raw query): ' . $questions->count());
+                
+                if ($questions->count() > 0) {
+                    // Nếu có câu hỏi từ raw query, dùng collection này
+                    $testQuestions = collect($questionsRaw)->map(function($questionId, $index) use ($questions) {
+                        return (object)[
+                            'order' => $index + 1,
+                            'question' => $questions->firstWhere('id', $questionId)
+                        ];
+                    })->filter(function($item) {
+                        return $item->question !== null;
+                    });
+                    
+                    Log::info('Đã tạo testQuestions từ raw query: ' . $testQuestions->count());
+                }
+            }
+            
+            // Nếu vẫn không có câu hỏi, hủy lượt thi và trả về thông báo lỗi
+            if ($testQuestions->count() == 0) {
+                // Hủy lượt thi vừa tạo vì không có câu hỏi
+                $attempt->delete();
+                
+                return redirect()->route('seafarer.tests.index')
+                            ->with('error', 'Bài kiểm tra này không có câu hỏi nào. Vui lòng liên hệ quản trị viên.');
+            }
+        }
         
         // Đối với bài kiểm tra không phải ngẫu nhiên, trộn thứ tự câu hỏi nếu cần
-        if (!$test->is_random && $test->shuffle_questions) {
+        if (!$test->is_random && isset($test->shuffle_questions) && $test->shuffle_questions) {
             $testQuestions = $testQuestions->shuffle();
         }
         

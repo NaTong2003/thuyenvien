@@ -55,6 +55,14 @@
         box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         z-index: 100;
     }
+
+    .debug-info {
+        background-color: #f8f9fa;
+        border: 1px solid #ddd;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
 </style>
 @endsection
 
@@ -75,6 +83,30 @@
         </div>
     </div>
 
+    <!-- Debug thông tin -->
+    <div class="debug-info">
+        <h5>Thông tin debug:</h5>
+        <p>Test ID: {{ $test->id }}</p>
+        <p>Tổng số câu hỏi: {{ $testQuestions->count() }}</p>
+        <p>Thông tin testQuestions: {{ json_encode($testQuestions->take(1)) }}</p>
+        
+        @if($testQuestions->count() > 0)
+            @php
+                $firstQuestion = $testQuestions->first();
+                $question = $firstQuestion->question ?? null;
+            @endphp
+            
+            @if($question)
+                <p>Thông tin câu hỏi đầu tiên: ID={{ $question->id }}, Content={{ $question->content }}</p>
+                <p>Số câu trả lời của câu hỏi đầu tiên: {{ $question->answers->count() }}</p>
+            @else
+                <p>Không thể truy cập thông tin câu hỏi đầu tiên</p>
+                <p>Cấu trúc của $firstQuestion: {{ get_class($firstQuestion) }}</p>
+                <p>Chi tiết: {{ json_encode($firstQuestion) }}</p>
+            @endif
+        @endif
+    </div>
+
     <div class="row">
         <div class="col-md-9">
             <div class="card shadow mb-4">
@@ -85,65 +117,79 @@
                         @php $questions = $testQuestions; @endphp
                         
                         <div id="questions-container">
-                            @foreach($questions as $index => $testQuestion)
-                                @php $question = $testQuestion->question; @endphp
-                                <div id="question-{{ $index + 1 }}" class="question-section mb-4 {{ $index > 0 ? 'd-none' : '' }}">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h5 class="card-title">Câu {{ $index + 1 }}/{{ $questions->count() }}</h5>
-                                        <button type="button" class="btn btn-outline-warning btn-sm mark-question" data-index="{{ $index + 1 }}">
-                                            <i class="fas fa-bookmark me-1"></i> Đánh dấu để xem lại
-                                        </button>
+                            @forelse($questions as $index => $testQuestion)
+                                @php 
+                                    $question = isset($testQuestion->question) ? $testQuestion->question : null; 
+                                @endphp
+                                
+                                @if($question)
+                                    <div id="question-{{ $index + 1 }}" class="question-section mb-4 {{ $index > 0 ? 'd-none' : '' }}">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <h5 class="card-title">Câu {{ $index + 1 }}/{{ $questions->count() }}</h5>
+                                            <button type="button" class="btn btn-outline-warning btn-sm mark-question" data-index="{{ $index + 1 }}">
+                                                <i class="fas fa-bookmark me-1"></i> Đánh dấu để xem lại
+                                            </button>
+                                        </div>
+                                        
+                                        <p class="mb-4">{!! $question->content !!}</p>
+                                        
+                                        @if($question->type == 'Trắc nghiệm')
+                                            <div class="mb-3">
+                                                @foreach($question->answers as $answer)
+                                                    <div class="form-check mb-2">
+                                                        <input class="form-check-input answer-input" type="radio" 
+                                                            name="responses[{{ $question->id }}][answer_id]" 
+                                                            id="answer-{{ $question->id }}-{{ $answer->id }}" 
+                                                            value="{{ $answer->id }}"
+                                                            data-question="{{ $index + 1 }}">
+                                                        <label class="form-check-label" for="answer-{{ $question->id }}-{{ $answer->id }}">
+                                                            {{ $answer->content }}
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @elseif($question->type == 'Tự luận')
+                                            <div class="mb-3">
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][text_response]" 
+                                                    rows="5" 
+                                                    placeholder="Nhập câu trả lời của bạn..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                            </div>
+                                        @elseif($question->type == 'Tình huống')
+                                            <div class="mb-3">
+                                                <textarea class="form-control answer-input" 
+                                                    name="responses[{{ $question->id }}][text_response]" 
+                                                    rows="5" 
+                                                    placeholder="Nhập phân tích tình huống của bạn..."
+                                                    data-question="{{ $index + 1 }}"></textarea>
+                                            </div>
+                                        @endif
+                                        
+                                        <div class="d-flex justify-content-between mt-4">
+                                            <button type="button" class="btn btn-secondary prev-question" 
+                                                {{ $index == 0 ? 'disabled' : '' }}
+                                                data-index="{{ $index + 1 }}">
+                                                <i class="fas fa-arrow-left me-1"></i> Câu trước
+                                            </button>
+                                            <button type="button" class="btn btn-primary next-question" 
+                                                {{ $index == $questions->count() - 1 ? 'disabled' : '' }}
+                                                data-index="{{ $index + 1 }}">
+                                                Câu tiếp theo <i class="fas fa-arrow-right ms-1"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    
-                                    <p class="mb-4">{!! $question->content !!}</p>
-                                    
-                                    @if($question->type == 'Trắc nghiệm')
-                                        <div class="mb-3">
-                                            @foreach($question->answers as $answer)
-                                                <div class="form-check mb-2">
-                                                    <input class="form-check-input answer-input" type="radio" 
-                                                        name="responses[{{ $question->id }}][answer_id]" 
-                                                        id="answer-{{ $question->id }}-{{ $answer->id }}" 
-                                                        value="{{ $answer->id }}"
-                                                        data-question="{{ $index + 1 }}">
-                                                    <label class="form-check-label" for="answer-{{ $question->id }}-{{ $answer->id }}">
-                                                        {{ $answer->content }}
-                                                    </label>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @elseif($question->type == 'Tự luận')
-                                        <div class="mb-3">
-                                            <textarea class="form-control answer-input" 
-                                                name="responses[{{ $question->id }}][text_response]" 
-                                                rows="5" 
-                                                placeholder="Nhập câu trả lời của bạn..."
-                                                data-question="{{ $index + 1 }}"></textarea>
-                                        </div>
-                                    @elseif($question->type == 'Tình huống')
-                                        <div class="mb-3">
-                                            <textarea class="form-control answer-input" 
-                                                name="responses[{{ $question->id }}][text_response]" 
-                                                rows="5" 
-                                                placeholder="Nhập phân tích tình huống của bạn..."
-                                                data-question="{{ $index + 1 }}"></textarea>
-                                        </div>
-                                    @endif
-                                    
-                                    <div class="d-flex justify-content-between mt-4">
-                                        <button type="button" class="btn btn-secondary prev-question" 
-                                            {{ $index == 0 ? 'disabled' : '' }}
-                                            data-index="{{ $index + 1 }}">
-                                            <i class="fas fa-arrow-left me-1"></i> Câu trước
-                                        </button>
-                                        <button type="button" class="btn btn-primary next-question" 
-                                            {{ $index == $questions->count() - 1 ? 'disabled' : '' }}
-                                            data-index="{{ $index + 1 }}">
-                                            Câu tiếp theo <i class="fas fa-arrow-right ms-1"></i>
-                                        </button>
+                                @else
+                                    <!-- Hiển thị thông báo lỗi nếu không tìm thấy câu hỏi -->
+                                    <div class="alert alert-danger">
+                                        Không thể tải thông tin câu hỏi. Vui lòng liên hệ quản trị viên.
                                     </div>
+                                @endif
+                            @empty
+                                <div class="alert alert-warning">
+                                    Không có câu hỏi nào trong bài kiểm tra này. Vui lòng liên hệ quản trị viên.
                                 </div>
-                            @endforeach
+                            @endforelse
                         </div>
 
                         <div class="fixed-bottom-container">
