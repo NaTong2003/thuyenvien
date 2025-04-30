@@ -1,0 +1,216 @@
+Yêu cầu hệ thống đánh giá năng lực thuyền viên
+3.1.1. Loại câu hỏi trong bài kiểm tra
+•	Trắc nghiệm.
+•	Tự luận.
+•	Câu hỏi mô phỏng tình huống.
+•	Bài kiểm tra thực hành.
+3.1.2.Phân loại độ khó của câu hỏi
+•	Hệ thống cho phép phân loại câu hỏi theo các mức độ: Dễ, Trung bình, Khó.
+3.1.3. Cách tổ chức bài kiểm tra
+•	Câu hỏi có thể được tổ chức theo chuyên môn cụ thể hoặc theo bài kiểm tra tổng hợp.
+3.1.4.Cơ chế cập nhật ngân hàng câu hỏi
+•	Hệ thống hỗ trợ cập nhật ngân hàng câu hỏi định kỳ.
+•    Chọn ngẫu nhiên câu hỏi từ ngân hàng đề thi
+•	Hệ thống có chức năng chọn ngẫu nhiên câu hỏi từ ngân hàng đề thi để đảm bảo tính khách quan.
+________________________________________
+3.2. Tạo và quản lý bài kiểm tra
+(Mục tiêu: Xác định cách tổ chức và triển khai bài đánh giá năng lực)
+3.2.1. Tạo bài kiểm tra theo vị trí công việc
+•	Hệ thống cho phép tạo bài kiểm tra riêng cho từng vị trí công việc.
+•	Chế độ kiểm tra thử
+•	Hệ thống có chế độ làm bài kiểm tra thử trước khi làm bài chính thức.
+•	Giới hạn thời gian làm bài
+•	Hệ thống cho phép đặt thời gian tối đa cho mỗi bài kiểm tra.
+•	Chế độ thi lại
+•	Thuyền viên có thể thi lại nếu không đạt yêu cầu.
+•	Thay đổi thứ tự câu hỏi.
+•	Hạn chế quay lại câu đã trả lời.
+•	Giám sát trực tuyến trong quá trình thi.
+________________________________________
+3.2.2. Thực hiện bài kiểm tra
+(Mục tiêu: Xác định cách thức thuyền viên sẽ làm bài kiểm tra trong hệ thống)
+•     Nền tảng làm bài kiểm tra
+•	Web
+• 	Hiển thị tiến độ & thời gian còn lại
+•	Giao diện hiển thị tiến độ làm bài và thời gian còn lại.
+• 	Lưu bài làm tạm thời
+•	Hệ thống lưu bài làm tạm thời nếu có sự cố mất kết nối.
+•    Hệ thống cho phép đánh dấu câu hỏi để xem lại trước khi nộp bài.
+________________________________________
+3.2.3. Đánh giá và chấm điểm
+(Mục tiêu: Xác định cách hệ thống tính điểm và đánh giá kết quả thuyền viên)
+• 	Cách thức chấm điểm
+•	Chấm điểm tự động hoặc có sự đánh giá của giám khảo.
+• 	Hiển thị kết quả
+•	Thuyền viên có thể nhận kết quả ngay sau khi hoàn thành bài kiểm tra.
+• 	Hiển thị lời giải & giải thích
+•	Hệ thống có thể hiển thị lời giải và giải thích sau khi làm bài.
+• 	Phân tích kết quả theo từng kỹ năng
+•	Hệ thống hiển thị kết quả theo từng kỹ năng để đánh giá điểm mạnh/yếu.
+• 	Gửi thông báo kết quả
+•	Hệ thống gửi thông báo về kết quả qua email hoặc tài khoản cá nhân.
+________________________________________
+3.2.4. Báo cáo & phân tích kết quả
+(Mục tiêu: Xác định nhu cầu theo dõi tiến độ và phân tích năng lực thuyền viên)
+• 	Biểu đồ thống kê kết quả
+•	Hệ thống hiển thị biểu đồ thống kê kết quả bài kiểm tra.
+• 	So sánh kết quả bài kiểm tra
+•	So sánh kết quả hiện tại với các lần kiểm tra trước.
+• 	Bảng xếp hạng thuyền viên
+•	Hệ thống có bảng xếp hạng để so sánh năng lực giữa các thuyền viên.
+•	Đề xuất khóa học & tài liệu ôn tập
+•	Hệ thống đề xuất khóa học hoặc tài liệu ôn tập dựa trên kết quả.
+________________________________________
+3.2.5. Quản lý người dùng & phân quyền
+(Mục tiêu: Xác định ai có quyền truy cập vào hệ thống và quản lý dữ liệu)
+•	 Hỗ trợ nhiều cấp độ người dùng
+•	Thuyền viên, Quản trị viên, Giám khảo.
+•	Phân quyền truy cập theo vai trò
+•	Hệ thống giới hạn quyền truy cập tùy theo vai trò của người dùng.
+• 	Quản lý tài khoản theo số hiệu thuyền viên (Seafarer ID)
+•	Hệ thống quản lý tài khoản theo Seafarer ID.
+• 	Chức năng khôi phục tài khoản & mật khẩu
+•	Hệ thống hỗ trợ khôi phục tài khoản khi quên mật khẩu.
+
+
+
+ 
+A. Chức danh trên boong (Deck Officers & Ratings)
+1.	Thuyền trưởng (Captain / Master)
+o	Chịu trách nhiệm tối cao về tàu, hàng hóa và thủy thủ đoàn.
+o	Quản lý hành trình, xử lý tình huống khẩn cấp, tuân thủ quy định an toàn hàng hải.
+o	Kiến thức chuyên sâu về điều hướng, khí tượng, luật hàng hải.
+2.	Thuyền phó (Chief Officer, 2nd Officer, 3rd Officer)
+o	Thuyền phó 1 (Chief Officer): Phụ trách hàng hải, an toàn và bảo trì boong.
+o	Thuyền phó 2 (2nd Officer): Chịu trách nhiệm về bản đồ, hành trình và thiết bị định vị.
+o	Thuyền phó 3 (3rd Officer): Giám sát an toàn sinh mạng, thiết bị cứu hộ và hỗ trợ hàng hải.
+3.	Thủy thủ (Able Seaman, Ordinary Seaman)
+o	Hỗ trợ điều hướng, bảo trì tàu, thực hiện các lệnh từ thuyền trưởng và thuyền phó.
+________________________________________
+B. Chức danh máy trưởng và thợ máy (Engine Department)
+1.	Máy trưởng (Chief Engineer)
+o	Quản lý hệ thống động lực của tàu, bảo trì máy móc, đảm bảo hiệu suất vận hành.
+2.	Máy phó (2nd Engineer, 3rd Engineer, 4th Engineer)
+o	Máy phó 1: Giám sát vận hành chính hệ thống máy.
+o	Máy phó 2, 3: Phụ trách động cơ phụ, hệ thống điện, nhiên liệu.
+3.	Thợ máy (Motorman, Oiler, Wiper)
+o	Hỗ trợ bảo trì máy móc, kiểm tra hệ thống dầu, nước làm mát.
+________________________________________
+C. Chức danh khác
+•	Điện trưởng (Electro-Technical Officer - ETO): Bảo trì hệ thống điện tử và tự động hóa trên tàu.
+•	Nhân viên phục vụ (Cook, Steward, Messman): Đảm bảo hậu cần, nấu ăn và vệ sinh.
+________________________________________
+3.3.2. Phân loại tàu trong hệ thống
+Loại tàu có ảnh hưởng lớn đến các yêu cầu đánh giá năng lực vì mỗi loại có đặc điểm riêng, yêu cầu kỹ năng khác nhau. Các loại tàu chính bao gồm:
+A. Tàu chở hàng (Cargo Ships)
+1.	Tàu hàng rời (Bulk Carrier): Chở than, ngũ cốc, quặng kim loại.
+2.	Tàu container (Container Ship): Chuyên vận chuyển container tiêu chuẩn.
+3.	Tàu chở hàng lỏng (Tanker): Chở dầu, khí hóa lỏng, hóa chất nguy hiểm.
+B. Tàu khách (Passenger Ships)
+1.	Tàu du lịch (Cruise Ship): Phục vụ du khách, yêu cầu kỹ năng cứu hộ, phục vụ.
+2.	Tàu phà (Ferry): Vận chuyển người và xe cộ giữa các cảng.
+C. Tàu chuyên dụng (Specialized Vessels)
+1.	Tàu kéo (Tugboat): Kéo và lai dắt tàu lớn vào cảng.
+2.	Tàu cứu hộ (Rescue Vessel): Thực hiện nhiệm vụ tìm kiếm cứu nạn trên biển.
+3.	Tàu nghiên cứu (Research Vessel): Phục vụ khảo sát khoa học biển.
+
+
+3.3.Mẫu form câu hỏi khảo sát thuyền viên:
+I, Thông tin cá nhân
+1.	Họ và tên:	
+2.	Tuổi:	
+3.	Chức danh hiện tại:
+(ngành boong lái)
+a.	Sỹ quan boong:
+o	Thuyền trưởng ( Capt)
+o	 Đại phó( C/O)
+o	Phó 2( 2/O)
+o	Phó 3( 3/0)
+o	Thực tập sỹ quan boong( DCDT)
+b.	Rating:
+o	Thuỷ thủ thủ trưởng- Bosun( BSN)
+o	Thuỷ thủ phó
+o	Thuỷ thủ thường
+o	Thuỷ thủ thực tập
+c.	Bộ phận bếp
+o	Bếp trưởng
+o	Phục vụ
+d.	Khác(ghi rõ):
+	
+4.	Số kinh nghiệm làm việc trên tàu:
+a.	Dưới 1 năm
+b.	1 – 3 năm
+c.	4 – 7 năm
+d.	Trên 7 năm
+5.	Bạn từng tham gia các kỳ kiểm tra đánh giá năng lực chuyên môn chưa?
+a.	Kiểm tra hàng hải
+b.	Kiểm tra Ces
+c.	Khác:	
+II, kinh nghiệm và chuyên nghành
+1.	Bạn có thường xuyên tham gia các khóa đào tạo, bồi dưỡng chuyên môn không?
+a.	Có, định kỳ hàng năm
+b.	Không 
+2.	Bạn có gặp khó khăn gì trong công việc tiếp cận tài liệu hoặc bài kiểm tra chuyên môn không?
+a.	Có
+b.	Không
+c.	Nếu có, vui lòng mô tả:
+	
+	
+	
+	
+3.	Bạn đánh giá thế nào về tính năng ứng dụng của các bài kiểm tra năng lực hiện tại?
+a.	Rất hữu ích
+b.	Khá hữu ích
+c.	Bình thường
+d.	Không hữu ích
+e.	Ý kiến khác:	
+	
+	
+	
+	
+III, Đánh giá về hệ thống kiểm tra trực tuyến
+1.	Bạn đã từng làm bài kiểm tra năng lực chuyên môn trực tuyến chưa?
+a.	Có
+b.	Không
+2.	Nếu có, bạn thấy ưu tiên của hệ thống kiểm tra trực tuyến là gì? (Chọn nhiều câu trả lời)
+a.	Có thể làm bài mọi lúc mọi nơi
+b.	Đánh giá năng lực thực tế
+c.	Cập nhập kết quả nhanh chóng
+d.	Hệ thống câu hỏi đa dạng
+e.	Khác: 	
+	
+	
+	
+	
+3.	Bạn gặp khó khăn gì khi làm bài kiểm tra trực tuyến?
+a.	Kết nối internet không ổn định
+b.	Hệ thống giao diện khó sử dụng
+c.	Câu hỏi chưa thực hiện được công việc
+d.	Thiếu tính năng hỗ trợ( xem lại câu trả lời, giải thích đáp án)
+e.	Khác:	
+	
+	
+4.	Bạn mong muốn hệ thống kiểm tra trực tuyến có những cải tiến nào?
+a.	Dễ sử dụng giao diện hơn
+b.	Thêm nhiều câu hỏi khảo sát thực tế hơn
+c.	Có hướng dẫn hoặc mẹo khi làm bài
+d.	Khả năng xem lại đáp án và phân tích chi tiết kết quả
+e.	Khác: 	
+	
+	
+5.	Bạn hãy đề xuất gì để hệ thống kiểm tra trực tuyến đáp ứng tốt hơn nhu cầu của thuyền viên?
+	
+	
+	
+	
+	
+	
+3.3.Báo cáo khảo sát thực tập
+3.3.1.Mục Đích
+Mục đích
+Phân quyền truy cập:
+Trong hệ thống này,  sẽ chỉ bao gồm 2 người dùng chính:
+Admin( quản trị viên): người dùng toàn quyền của hệ thống, admin sẽ quản lý toàn bộ bao gồm: quản lý thông tin thuyền viên, quản lý tài khoản thuyền viên, quản lý chức danh, quản lý điểm,...Trong ngân hàng câu hỏi, chỉ có admin có quyền thêm, sửa, xoá, cập nhật câu hỏi.
+Thuyền viên: tài khoản thuyền viên sẽ do chính thuyền viên tự mình đăng ký, bao gồm các thông tin: email, số điện thoại, họ tên, thuyền viên chỉ có thể xem thông tin cá nhân, cập nhật, thêm thông tin, làm các bài test theo chức danh của bản thân.
+Sau khi có tài khoản, vào những lần truy cập sau chỉ cần đăng nhập là vào được hệ thống.
+

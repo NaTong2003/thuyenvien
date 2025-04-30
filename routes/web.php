@@ -1,0 +1,82 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\QuestionController;
+use App\Http\Controllers\Admin\TestController as AdminTestController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Seafarer\DashboardController as SeafarerDashboardController;
+use App\Http\Controllers\Seafarer\TestController as SeafarerTestController;
+use App\Http\Controllers\Seafarer\ProfileController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "web" middleware group. Make something great!
+|
+*/
+
+// Trang chủ
+Route::get('/', function () {
+    return view('welcome');
+});
+
+// Routes xác thực
+Route::get('/register', [AuthController::class, 'registerForm'])->name('register.form');
+Route::post('/register', [AuthController::class, 'register'])->name('register');
+Route::get('/login', [AuthController::class, 'loginForm'])->name('login.form');
+Route::post('/login', [AuthController::class, 'login'])->name('login');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Routes cho Admin
+Route::prefix('admin')->middleware(['auth', 'isAdmin'])->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // Quản lý người dùng
+    Route::resource('users', UserController::class);
+    
+    // Quản lý câu hỏi
+    Route::resource('questions', QuestionController::class);
+    
+    // Quản lý bài kiểm tra
+    Route::resource('tests', AdminTestController::class);
+    Route::get('/tests/{test}/questions', [AdminTestController::class, 'questions'])->name('tests.questions');
+    Route::post('/tests/{test}/questions', [AdminTestController::class, 'storeQuestions'])->name('tests.questions.store');
+    Route::get('/tests/{test}/preview', [AdminTestController::class, 'preview'])->name('tests.preview');
+    Route::get('/tests/{test}/statistics', [AdminTestController::class, 'statistics'])->name('tests.statistics');
+    Route::patch('/tests/{test}/toggle', [AdminTestController::class, 'toggle'])->name('tests.toggle');
+    
+    // Tạo bài kiểm tra ngẫu nhiên
+    Route::get('/tests/random/create', [AdminTestController::class, 'createRandom'])->name('tests.random.create');
+    Route::post('/tests/random/store', [AdminTestController::class, 'storeRandom'])->name('tests.random.store');
+    
+    // Báo cáo và thống kê
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/performance', [ReportController::class, 'performance'])->name('reports.performance');
+    Route::get('/reports/test/{test}', [ReportController::class, 'testReport'])->name('reports.test');
+    Route::get('/reports/seafarer/{user}', [ReportController::class, 'seafarerReport'])->name('reports.seafarer');
+    Route::get('/reports/attempt/{testAttempt}', [ReportController::class, 'attemptReport'])->name('reports.attempt');
+});
+
+// Routes cho Thuyền viên
+Route::prefix('seafarer')->middleware(['auth', 'isSeafarer'])->name('seafarer.')->group(function () {
+    Route::get('/dashboard', [SeafarerDashboardController::class, 'index'])->name('dashboard');
+    
+    // Làm bài kiểm tra
+    Route::get('/tests', [SeafarerTestController::class, 'index'])->name('tests.index');
+    Route::get('/tests/{test}', [SeafarerTestController::class, 'show'])->name('tests.show');
+    Route::get('/tests/{test}/start', [SeafarerTestController::class, 'start'])->name('tests.start');
+    Route::post('/tests/{test}/submit', [SeafarerTestController::class, 'submit'])->name('tests.submit');
+    Route::get('/tests/{testAttempt}/result', [SeafarerTestController::class, 'result'])->name('tests.result');
+    
+    // Quản lý hồ sơ
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::get('/profile/edit', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+});
