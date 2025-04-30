@@ -392,76 +392,135 @@ class ReportController extends Controller
         
         // Lấy các câu trả lời cần chấm điểm (tự luận, tình huống, thực hành, mô phỏng)
         $subjectiveResponses = $attempt->userResponses()
-                                    ->whereNull('score')
                                     ->whereHas('question', function($query) {
                                         $query->whereIn('type', ['Tự luận', 'Tình huống', 'Thực hành', 'Mô phỏng']);
                                     })
-                                    ->with('question')
+                                    ->with(['question', 'question.category'])
                                     ->get();
         
-        return view('admin.reports.mark_attempt', compact('attempt', 'subjectiveResponses'));
+        // Đếm số lượng câu hỏi và trạng thái
+        $totalSubjective = $subjectiveResponses->count();
+        $ungraded = $subjectiveResponses->whereNull('score')->count();
+        $graded = $totalSubjective - $ungraded;
+        
+        return view('admin.reports.mark_attempt', compact(
+            'attempt', 
+            'subjectiveResponses',
+            'totalSubjective',
+            'ungraded',
+            'graded'
+        ));
     }
     
     /**
-     * Lưu điểm cho bài thi
+     * Lưu điểm số đã chấm
      */
     public function saveMarking(Request $request, $id)
     {
-        $attempt = TestAttempt::findOrFail($id);
-        
-        DB::beginTransaction();
-        
         try {
-            $scores = $request->input('scores', []);
-            $comments = $request->input('comments', []);
-            $totalScore = 0;
-            $totalQuestionsCount = 0;
+            DB::beginTransaction();
+            $attempt = TestAttempt::findOrFail($id);
             
-            // Lưu điểm cho từng câu hỏi
-            foreach ($scores as $responseId => $score) {
-                $userResponse = UserResponse::findOrFail($responseId);
-                $userResponse->score = $score;
-                $userResponse->admin_comment = $comments[$responseId] ?? null;
-                $userResponse->is_marked = true;
-                $userResponse->save();
-                
-                $totalScore += $score;
-                $totalQuestionsCount++;
-            }
+            // Lấy dữ liệu từ form
+            $scores = $request->input('score', []);
+            $comments = $request->input('comment', []);
+            $responseIds = $request->input('response_id', []);
             
-            // Lấy tất cả các câu trả lời và tính tổng điểm
-            $allResponses = $attempt->userResponses;
-            $totalPoints = $allResponses->count();
-            $markedPoints = 0;
+            $totalProcessed = 0;
             
-            foreach ($allResponses as $response) {
-                if (!is_null($response->score)) {
-                    $markedPoints += $response->score;
+            // Cập nhật điểm số và nhận xét cho từng câu trả lời
+            foreach ($responseIds as $index => $responseId) {
+                if (isset($scores[$index])) {
+                    $response = UserResponse::findOrFail($responseId);
+                    $score = $scores[$index] !== '' ? $scores[$index] : null;
+                    $comment = $comments[$index] ?? null;
+                    
+                    $response->score = $score;
+                    $response->admin_comment = $comment;
+                    $response->save();
+                    
+                    if ($score !== null) {
+                        $totalProcessed++;
+                    }
                 }
             }
             
-            // Kiểm tra xem đã chấm hết câu hỏi chưa
-            $pendingResponses = $attempt->userResponses()->whereNull('score')->count();
+            // Kiểm tra nếu tất cả câu hỏi chủ quan đã được chấm
+            $allResponses = $attempt->userResponses()
+                ->whereHas('question', function($query) {
+                    $query->whereIn('type', ['Tự luận', 'Tình huống', 'Thực hành', 'Mô phỏng']);
+                })
+                ->count();
+                
+            $gradedResponses = $attempt->userResponses()
+                ->whereHas('question', function($query) {
+                    $query->whereIn('type', ['Tự luận', 'Tình huống', 'Thực hành', 'Mô phỏng']);
+                })
+                ->whereNotNull('score')
+                ->count();
             
-            if ($pendingResponses == 0) {
-                // Đã chấm hết, tính điểm tổng
-                $finalScore = ($markedPoints / $totalPoints) * 100;
-                $attempt->score = round($finalScore, 2);
-                $attempt->is_marked = true;
-                $attempt->needs_marking = false;
+            // Nếu tất cả câu hỏi chủ quan đã được chấm
+            if ($allResponses > 0 && $allResponses == $gradedResponses) {
+                // Tính toán lại điểm tổng và cập nhật trạng thái bài thi
+                $this->calculateFinalScore($attempt);
             }
             
-            $attempt->save();
-            
             DB::commit();
-            
-            return redirect()->route('admin.reports.marking')
-                             ->with('success', 'Đã chấm điểm thành công!');
-                             
+            return redirect()->route('admin.reports.mark.attempt', $id)
+                ->with('success', 'Đã lưu điểm thành công cho ' . $totalProcessed . ' câu trả lời.');
+                
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
-                             ->with('error', 'Đã xảy ra lỗi khi chấm điểm: ' . $e->getMessage());
+                ->with('error', 'Có lỗi khi lưu điểm: ' . $e->getMessage())
+                ->withInput();
         }
+    }
+    
+    /**
+     * Tính toán điểm tổng của bài thi
+     */
+    private function calculateFinalScore(TestAttempt $attempt)
+    {
+        // Lấy tất cả các câu trả lời của bài thi
+        $responses = $attempt->userResponses()->with('question')->get();
+        
+        $totalPoints = 0;
+        $earnedPoints = 0;
+        
+        // Tính điểm cho từng loại câu hỏi
+        foreach ($responses as $response) {
+            $questionType = $response->question->type;
+            
+            // Xử lý câu hỏi khách quan (tự động chấm)
+            if (in_array($questionType, ['Trắc nghiệm', 'Đúng/Sai', 'Ghép đôi'])) {
+                $totalPoints++;
+                
+                if ($response->isCorrect()) {
+                    $earnedPoints += 1;
+                }
+            }
+            // Xử lý câu hỏi chủ quan (giám khảo chấm)
+            else if (in_array($questionType, ['Tự luận', 'Tình huống', 'Thực hành', 'Mô phỏng']) && $response->score !== null) {
+                $totalPoints++;
+                $earnedPoints += $response->score;
+            }
+        }
+        
+        // Tính điểm tổng (thang điểm 100)
+        if ($totalPoints > 0) {
+            $finalScore = ($earnedPoints / $totalPoints) * 100;
+            $attempt->score = round($finalScore, 2);
+        } else {
+            $attempt->score = 0;
+        }
+        
+        // Cập nhật trạng thái đã chấm điểm
+        $attempt->is_completed = true;
+        $attempt->is_marked = true;
+        $attempt->needs_marking = false;
+        $attempt->save();
+        
+        return $attempt->score;
     }
 }

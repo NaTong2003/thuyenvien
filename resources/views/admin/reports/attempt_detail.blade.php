@@ -180,7 +180,7 @@
                         </div>
                         <div class="col-md-3">
                             <div class="stat-item">
-                                <div class="stat-value text-info">{{ $accuracy }}%</div>
+                                <div class="stat-value text-info">{{ $accuracy }}</div>
                                 <div class="stat-label">Độ chính xác</div>
                             </div>
                         </div>
@@ -195,11 +195,14 @@
                             <div class="answer-header">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        Câu {{ $index + 1 }}:
-                                        @if($response->answer && $response->answer->is_correct)
-                                            <span class="badge bg-success ms-2">Đúng</span>
-                                        @else
-                                            <span class="badge bg-danger ms-2">Sai</span>
+                                        Câu {{ $index + 1 }}: 
+                                        <span class="badge bg-info ms-2">{{ $response->question->type }}</span>
+                                        @if($response->question->type == 'Trắc nghiệm')
+                                            @if($response->answer && $response->answer->is_correct)
+                                                <span class="badge bg-success ms-2">Đúng</span>
+                                            @else
+                                                <span class="badge bg-danger ms-2">Sai</span>
+                                            @endif
                                         @endif
                                     </div>
                                     <div>
@@ -236,19 +239,118 @@
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">Câu trả lời của thuyền viên:</label>
                                         <div class="answer-option">
-                                            {{ $response->essay_answer ?? 'Không có câu trả lời' }}
+                                            {!! nl2br(e($response->text_response)) !!}
                                         </div>
                                     </div>
-                                    
+
+                                    @if($response->admin_comment)
                                     <div class="mb-3">
-                                        <label class="form-label fw-bold">Đáp án mẫu:</label>
-                                        <div class="answer-option correct">
-                                            @if($response->question->answers->count() > 0)
-                                                {{ $response->question->answers->first()->content }}
-                                            @else
-                                                Không có đáp án mẫu
-                                            @endif
+                                        <label class="form-label fw-bold">Nhận xét của giám khảo:</label>
+                                        <div class="answer-option bg-light">
+                                            {!! nl2br(e($response->admin_comment)) !!}
                                         </div>
+                                    </div>
+                                    @endif
+                                    
+                                    <div class="mt-2">
+                                        <span class="badge bg-primary">Điểm: {{ $response->score }}</span>
+                                    </div>
+                                @elseif($response->question->type == 'Tình huống')
+                                    <div class="mb-3">
+                                        @php
+                                            $situationResponse = json_decode($response->text_response, true);
+                                        @endphp
+                                        
+                                        <label class="form-label fw-bold">Phân tích tình huống:</label>
+                                        <div class="answer-option">
+                                            {!! nl2br(e($situationResponse['analysis'] ?? 'Không có phân tích')) !!}
+                                        </div>
+                                        
+                                        <label class="form-label fw-bold mt-3">Giải pháp đề xuất:</label>
+                                        <div class="answer-option">
+                                            {!! nl2br(e($situationResponse['solution'] ?? 'Không có giải pháp đề xuất')) !!}
+                                        </div>
+                                    </div>
+
+                                    @if($response->admin_comment)
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Nhận xét của giám khảo:</label>
+                                        <div class="answer-option bg-light">
+                                            {!! nl2br(e($response->admin_comment)) !!}
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    <div class="mt-2">
+                                        <span class="badge bg-primary">Điểm: {{ $response->score }}</span>
+                                    </div>
+                                @elseif($response->question->type == 'Thực hành')
+                                    <div class="mb-3">
+                                        @php
+                                            $practicalResponse = json_decode($response->text_response, true);
+                                        @endphp
+                                        
+                                        <label class="form-label fw-bold">Quy trình thực hiện:</label>
+                                        <div class="answer-option">
+                                            {!! nl2br(e($practicalResponse['process'] ?? 'Không có mô tả quy trình')) !!}
+                                        </div>
+                                        
+                                        <label class="form-label fw-bold mt-3">Kết quả đạt được:</label>
+                                        <div class="answer-option">
+                                            {!! nl2br(e($practicalResponse['result'] ?? 'Không có kết quả')) !!}
+                                        </div>
+                                        
+                                        @if(isset($practicalResponse['evidence_file']) && $practicalResponse['evidence_file'])
+                                            <label class="form-label fw-bold mt-3">Bằng chứng đính kèm:</label>
+                                            <div class="answer-option">
+                                                <a href="{{ asset('storage/' . $practicalResponse['evidence_file']) }}" 
+                                                   target="_blank" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-file-download me-1"></i> Tải file bằng chứng
+                                                </a>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    @if($response->admin_comment)
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Nhận xét của giám khảo:</label>
+                                        <div class="answer-option bg-light">
+                                            {!! nl2br(e($response->admin_comment)) !!}
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    <div class="mt-2">
+                                        <span class="badge bg-primary">Điểm: {{ $response->score }}</span>
+                                    </div>
+                                @elseif($response->question->type == 'Mô phỏng')
+                                    <div class="mb-3">
+                                        @php
+                                            $simulationResponse = json_decode($response->text_response, true);
+                                        @endphp
+                                        
+                                        <label class="form-label fw-bold">Các bước đã thực hiện:</label>
+                                        <div class="answer-option">
+                                            {!! nl2br(e($simulationResponse['steps'] ?? 'Không có mô tả các bước')) !!}
+                                        </div>
+                                        
+                                        <label class="form-label fw-bold mt-3">Kết quả mô phỏng:</label>
+                                        <div class="answer-option">
+                                            {!! nl2br(e($simulationResponse['result'] ?? 'Không có kết quả')) !!}
+                                        </div>
+                                    </div>
+
+                                    @if($response->admin_comment)
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Nhận xét của giám khảo:</label>
+                                        <div class="answer-option bg-light">
+                                            {!! nl2br(e($response->admin_comment)) !!}
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    <div class="mt-2">
+                                        <span class="badge bg-primary">Điểm: {{ $response->score }}</span>
                                     </div>
                                 @endif
                             </div>
@@ -317,16 +419,14 @@
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <div class="progress">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ $accuracy }}%"
-                                 aria-valuenow="{{ $accuracy }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">
+                        <h6 class="mb-2">Tỷ lệ câu trả lời đúng: {{ $accuracy }}%</h6>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success text-white" role="progressbar" 
+                                 style="width: {{ $accuracy }}%;" 
+                                 aria-valuenow="{{ $accuracy }}" aria-valuemin="0" aria-valuemax="100">
                                 {{ $accuracy }}%
                             </div>
                         </div>
-                        <div class="small text-muted mt-2">Tỷ lệ câu trả lời đúng</div>
                     </div>
                     
                     <div class="d-flex justify-content-center">

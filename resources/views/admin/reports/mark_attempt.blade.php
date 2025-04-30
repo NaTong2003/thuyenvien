@@ -22,6 +22,13 @@
         </div>
     @endif
 
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card shadow mb-4 border-left-info">
@@ -81,13 +88,24 @@
         <div class="col-md-8">
             <div class="card shadow mb-4 border-left-primary">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">Chấm điểm câu hỏi tự luận</h6>
-                    <span class="badge bg-info">{{ $subjectiveResponses->count() }} câu hỏi cần chấm</span>
+                    <h6 class="m-0 font-weight-bold text-primary">Chấm điểm bài làm</h6>
+                    <div>
+                        <span class="badge bg-info me-2">{{ $subjectiveResponses->count() }} câu hỏi cần xem xét</span>
+                        <span class="badge bg-warning me-2">{{ $subjectiveResponses->whereNull('score')->count() }} câu chưa chấm</span>
+                        <span class="badge bg-success">{{ $subjectiveResponses->whereNotNull('score')->count() }} câu đã chấm</span>
+                    </div>
                 </div>
                 <div class="card-body">
                     @if($subjectiveResponses->count() > 0)
                         <form action="{{ route('admin.reports.save.marking', $attempt->id) }}" method="POST">
                             @csrf
+                            
+                            @if($subjectiveResponses->whereNull('score')->count() == 0)
+                                <div class="alert alert-success mb-4">
+                                    <i class="fas fa-check-circle me-1"></i> Tất cả câu hỏi đã được chấm điểm. Bạn có thể chỉnh sửa điểm nếu cần.
+                                </div>
+                            @endif
+                            
                             <div class="accordion" id="markingAccordion">
                                 @foreach($subjectiveResponses as $index => $response)
                                     <div class="accordion-item mb-3 border shadow-sm">
@@ -97,6 +115,11 @@
                                                     <div>
                                                         <span class="me-3 fw-bold">Câu hỏi {{ $index + 1 }}</span>
                                                         <span class="badge bg-primary">{{ $response->question->type }}</span>
+                                                        @if($response->score !== null)
+                                                            <span class="badge bg-success ms-2">Đã chấm: {{ $response->score }}</span>
+                                                        @else
+                                                            <span class="badge bg-warning text-dark ms-2">Chưa chấm</span>
+                                                        @endif
                                                     </div>
                                                     <div class="text-muted small">
                                                         {{ $response->question->category }} | 
@@ -213,7 +236,7 @@
                                                                 <div class="form-group mb-3">
                                                                     <label class="form-label fw-bold">Điểm (0.0 - 1.0):</label>
                                                                     <div class="input-group">
-                                                                        <input type="number" step="0.1" min="0" max="1" class="form-control" name="scores[{{ $response->id }}]" value="{{ $response->score ?? '' }}" required>
+                                                                        <input type="number" step="0.1" min="0" max="1" class="form-control" name="score[{{ $index }}]" value="{{ $response->score ?? '' }}" required>
                                                                         <span class="input-group-text"><i class="fas fa-star"></i></span>
                                                                     </div>
                                                                 </div>
@@ -221,10 +244,11 @@
                                                             <div class="col-md-8">
                                                                 <div class="form-group mb-3">
                                                                     <label class="form-label fw-bold">Nhận xét:</label>
-                                                                    <textarea class="form-control" name="comments[{{ $response->id }}]" rows="3" placeholder="Nhập nhận xét của bạn...">{{ $response->admin_comment ?? '' }}</textarea>
+                                                                    <textarea class="form-control" name="comment[{{ $index }}]" rows="3" placeholder="Nhập nhận xét của bạn...">{{ $response->admin_comment ?? '' }}</textarea>
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                        <input type="hidden" name="response_id[{{ $index }}]" value="{{ $response->id }}">
                                                     </div>
                                                 </div>
                                             </div>
