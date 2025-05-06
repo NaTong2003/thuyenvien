@@ -64,6 +64,14 @@ class TestAttempt extends Model
     }
 
     /**
+     * The certificates associated with this test attempt.
+     */
+    public function certificates()
+    {
+        return $this->hasMany(Certificate::class);
+    }
+
+    /**
      * Get the duration of the test attempt in minutes.
      */
     public function getDurationInMinutes()
@@ -96,7 +104,8 @@ class TestAttempt extends Model
      */
     public function isPassed()
     {
-        // Có thể cấu hình điểm đạt tùy theo yêu cầu
-        return $this->is_completed && $this->score >= 60;
+        // Lấy điểm chuẩn từ bài kiểm tra hoặc sử dụng giá trị mặc định 50
+        $passingScore = $this->test->passing_score ?? 50;
+        return $this->is_completed && $this->score >= $passingScore;
     }
 }

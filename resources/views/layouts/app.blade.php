@@ -262,12 +262,12 @@
                             @yield('content')
                         </div>
                     @else
-                        <div class="col-12 py-4">
+                        <div class="col-12 px-0">
                             @yield('content')
                         </div>
                     @endif
                 @else
-                    <div class="col-12 py-4">
+                    <div class="col-12 px-0">
                         @yield('content')
                     </div>
                 @endauth
@@ -289,5 +289,6 @@
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     
     @yield('js')
+    @yield('scripts')
 </body>
 </html> 

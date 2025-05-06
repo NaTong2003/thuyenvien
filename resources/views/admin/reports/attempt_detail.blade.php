@@ -186,6 +186,28 @@
                         </div>
                     </div>
                     
+                    @if($isPassed)
+                        <div class="certificate-section p-3 bg-light rounded mb-4 text-center">
+                            @if($hasCertificate)
+                                <h5 class="text-success mb-3">
+                                    <i class="fas fa-certificate me-2"></i> Thuyền viên đã được cấp chứng chỉ
+                                </h5>
+                                @foreach($testAttempt->certificates as $certificate)
+                                    <a href="{{ route('admin.certificates.show', $certificate->id) }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i> Xem chứng chỉ {{ $certificate->certificate_number }}
+                                    </a>
+                                @endforeach
+                            @else
+                                <h5 class="text-warning mb-3">
+                                    <i class="fas fa-exclamation-triangle me-2"></i> Thuyền viên chưa được cấp chứng chỉ
+                                </h5>
+                                <a href="{{ route('admin.certificates.create.from.attempt', $testAttempt->id) }}" class="btn btn-success">
+                                    <i class="fas fa-certificate me-1"></i> Cấp chứng chỉ
+                                </a>
+                            @endif
+                        </div>
+                    @endif
+                    
                     <hr class="my-4">
                     
                     <h5 class="mb-3">Các câu trả lời:</h5>
@@ -453,6 +475,35 @@
                     @endif
                 </div>
             </div>
+            
+            @if($isPassed)
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-certificate me-1"></i> Chứng chỉ
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @if($hasCertificate)
+                        <div class="alert alert-info mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Thuyền viên đã được cấp chứng chỉ cho bài kiểm tra này.
+                        </div>
+                        <a href="{{ route('admin.certificates.index', ['user_id' => $user->id]) }}" class="btn btn-primary btn-block">
+                            <i class="fas fa-search me-1"></i> Xem lịch sử chứng chỉ
+                        </a>
+                    @else
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Thuyền viên chưa được cấp chứng chỉ cho bài kiểm tra này.
+                        </div>
+                        <a href="{{ route('admin.certificates.create', ['attempt_id' => $testAttempt->id]) }}" class="btn btn-success btn-block">
+                            <i class="fas fa-plus-circle me-1"></i> Cấp chứng chỉ
+                        </a>
+                    @endif
+                </div>
+            </div>
+            @endif
             
             <div class="d-flex justify-content-between">
                 <a href="{{ route('admin.reports.test', $test->id) }}" class="btn btn-secondary">

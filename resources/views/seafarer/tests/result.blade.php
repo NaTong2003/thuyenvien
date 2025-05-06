@@ -448,6 +448,99 @@
                         </div>
                     </div>
                 @endforeach
+
+            </div>
+            
+            <!-- Thông tin chứng chỉ -->
+            @if($attempt->isPassed())
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-certificate me-1"></i> Thông tin chứng chỉ
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        @if($attempt->certificates->count() > 0)
+                            <div class="alert alert-success mb-3">
+                                <i class="fas fa-check-circle me-1"></i> Bạn đã được cấp chứng chỉ cho bài kiểm tra này!
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Mã chứng chỉ</th>
+                                            <th>Tên chứng chỉ</th>
+                                            <th>Ngày cấp</th>
+                                            <th>Trạng thái</th>
+                                            <th>Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($attempt->certificates as $certificate)
+                                            <tr>
+                                                <td>{{ $certificate->certificate_number }}</td>
+                                                <td>{{ $certificate->title }}</td>
+                                                <td>{{ $certificate->issue_date->format('d/m/Y') }}</td>
+                                                <td>
+                                                    @if($certificate->status == 'active')
+                                                        @if($certificate->expiry_date && $certificate->expiry_date->isPast())
+                                                            <span class="badge bg-secondary">Hết hạn</span>
+                                                        @else
+                                                            <span class="badge bg-success">Hoạt động</span>
+                                                        @endif
+                                                    @elseif($certificate->status == 'expired')
+                                                        <span class="badge bg-secondary">Hết hạn</span>
+                                                    @elseif($certificate->status == 'revoked')
+                                                        <span class="badge bg-danger">Đã thu hồi</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <a href="{{ route('seafarer.certificates.show', $certificate->id) }}" class="btn btn-sm btn-info">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ route('seafarer.certificates.download', $certificate->id) }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-download"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i> Bạn đã đạt điểm chuẩn cho bài kiểm tra này. Vui lòng liên hệ quản trị viên để được cấp chứng chỉ.
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+            
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Hành động tiếp theo</h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ route('seafarer.tests.show', $test->id) }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-info-circle me-2"></i> Xem thông tin bài kiểm tra
+                        </a>
+                        <a href="{{ route('seafarer.tests.index') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-list me-2"></i> Xem danh sách bài kiểm tra
+                        </a>
+                        @if(!$attempt->isPassed())
+                            <a href="{{ route('seafarer.tests.start', $test->id) }}" class="list-group-item list-group-item-action list-group-item-primary">
+                                <i class="fas fa-redo me-2"></i> Làm lại bài kiểm tra
+                            </a>
+                        @endif
+                        <a href="{{ route('seafarer.dashboard') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-tachometer-alt me-2"></i> Quay lại Dashboard
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -457,9 +550,13 @@
 @section('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// Khai báo biến PHP một cách an toàn
+var attemptScore = @json($attempt->score);
+</script>
+<script>
     $(document).ready(function() {
         // Dữ liệu phân tích theo danh mục
-        const categoryData = {
+        var categoryData = {
             labels: ['Hàng hải', 'An toàn', 'Quản lý', 'Kỹ thuật', 'Tiếng Anh chuyên ngành'],
             datasets: [{
                 label: 'Điểm số theo danh mục',
@@ -483,7 +580,7 @@
         };
 
         // Khởi tạo biểu đồ danh mục
-        const categoryChart = new Chart(
+        var categoryChart = new Chart(
             document.getElementById('categoryChart'),
             {
                 type: 'bar',
@@ -506,11 +603,11 @@
         );
         
         // Dữ liệu tiến độ qua các lần kiểm tra
-        const progressData = {
+        var progressData = {
             labels: ['Lần 1', 'Lần 2', 'Lần 3', 'Lần hiện tại'],
             datasets: [{
                 label: 'Điểm số',
-                data: [65, 72, 78, {{ $attempt->score }}],
+                data: [65, 72, 78, attemptScore],
                 fill: false,
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
@@ -518,7 +615,7 @@
         };
         
         // Khởi tạo biểu đồ tiến độ
-        const progressChart = new Chart(
+        var progressChart = new Chart(
             document.getElementById('progressChart'),
             {
                 type: 'line',
@@ -541,28 +638,28 @@
         );
         
         // Phân tích và đề xuất các lĩnh vực cần cải thiện
-        const categories = categoryData.labels;
-        const scores = categoryData.datasets[0].data;
-        const weakAreas = [];
+        var categories = categoryData.labels;
+        var scores = categoryData.datasets[0].data;
+        var weakAreas = [];
         
-        scores.forEach((score, index) => {
+        scores.forEach(function(score, index) {
             if (score < 75) {
                 weakAreas.push({ category: categories[index], score: score });
             }
         });
         
-        const improvementList = $('#improvement-areas');
+        var improvementList = $('#improvement-areas');
         if (weakAreas.length > 0) {
-            weakAreas.sort((a, b) => a.score - b.score);
-            weakAreas.forEach(area => {
-                improvementList.append(`
-                    <li><strong>${area.category}</strong> - Điểm số hiện tại: ${area.score}/100</li>
-                `);
+            weakAreas.sort(function(a, b) { return a.score - b.score; });
+            weakAreas.forEach(function(area) {
+                improvementList.append(
+                    '<li><strong>' + area.category + '</strong> - Điểm số hiện tại: ' + area.score + '/100</li>'
+                );
             });
         } else {
-            improvementList.append(`
-                <li>Chúc mừng! Bạn đã đạt điểm tốt ở tất cả các lĩnh vực.</li>
-            `);
+            improvementList.append(
+                '<li>Chúc mừng! Bạn đã đạt điểm tốt ở tất cả các lĩnh vực.</li>'
+            );
         }
     });
 </script>

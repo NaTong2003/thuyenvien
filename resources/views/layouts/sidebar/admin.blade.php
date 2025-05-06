@@ -38,6 +38,12 @@
             Chấm điểm bài thi
         </a>
     </li>
+    <li class="nav-item">
+        <a href="{{ route('admin.certificates.index') }}" class="nav-link {{ request()->routeIs('admin.certificates.*') ? 'active' : '' }}">
+            <i class="fas fa-certificate"></i>
+            Quản lý Chứng chỉ
+        </a>
+    </li>
 </ul>
 
 <div class="mt-auto">

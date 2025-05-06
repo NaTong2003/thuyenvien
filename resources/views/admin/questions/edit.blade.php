@@ -115,6 +115,9 @@
         @csrf
         @method('PUT')
         
+        <!-- Thêm trường ẩn để lưu loại câu hỏi -->
+        <input type="hidden" name="question_type" value="{{ $question->type }}">
+        
         <div class="row">
             <div class="col-lg-8">
                 <div class="card shadow mb-4">
@@ -165,8 +168,8 @@
                                             </div>
                                             
                                             @if($index > 1)
-                                                <div class="remove-option">
-                                                    <i class="fas fa-times-circle" onclick="removeOption({{ $index }})"></i>
+                                                <div class="remove-option" data-id="{{ $index }}">
+                                                    <i class="fas fa-times-circle"></i>
                                                 </div>
                                             @endif
                                         </div>
@@ -268,9 +271,17 @@
                             <select class="form-select" id="category_id" name="category_id">
                                 <option value="">-- Chọn danh mục --</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id', $question->category_id) == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
+                                    <option value="{{ $category->id }}" {{ old('category_id', $question->category_id) == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
                                 @endforeach
                             </select>
+                            <div class="form-text">Nếu không tìm thấy danh mục phù hợp, vui lòng nhập tên danh mục mới bên dưới</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Tên danh mục khác</label>
+                            <input type="text" class="form-control" id="category" name="category" value="{{ old('category', $question->category) }}" placeholder="Nhập tên danh mục nếu không có trong danh sách trên">
                         </div>
                         
                         <div class="form-check mb-3">
@@ -304,155 +315,288 @@
 @section('scripts')
 <script src="https://cdn.ckeditor.com/ckeditor5/35.0.1/classic/ckeditor.js"></script>
 <script>
-    // Khởi tạo CKEditor cho nội dung câu hỏi
-    ClassicEditor
-        .create(document.querySelector('#content'))
-        .then(editor => {
-            // Bắt sự kiện thay đổi để cập nhật giá trị cho textarea ẩn
-            editor.model.document.on('change:data', () => {
-                document.querySelector('#content').value = editor.getData();
-            });
-        })
-        .catch(error => {
-            console.error(error);
-        });
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM đã sẵn sàng');
+        
+        // Gắn sự kiện cho các nút xóa phương án
+        setupRemoveOptionEvents();
+        
+        // Khởi tạo CKEditor cho nội dung câu hỏi
+        initializeCKEditors();
+        
+        // Xử lý nút thêm phương án mới
+        setupAddOptionButton();
+        
+        // Xử lý form submit để chuyển đổi correct_answer thành is_correct
+        setupFormSubmit();
+    });
     
-    @if($question->type == 'Trắc nghiệm')
-        // Xử lý thêm phương án mới
-        document.getElementById('add-option').addEventListener('click', function() {
+    // Thiết lập các sự kiện xóa phương án
+    function setupRemoveOptionEvents() {
+        console.log('Thiết lập sự kiện xóa phương án');
+        document.querySelectorAll('.remove-option').forEach(function(button) {
+            button.addEventListener('click', function() {
+                console.log('Đã nhấp vào nút xóa');
+                const optionId = this.getAttribute('data-id');
+                console.log('ID phương án cần xóa:', optionId);
+                removeOption(optionId);
+            });
+        });
+    }
+    
+    // Xóa phương án
+    function removeOption(optionId) {
+        console.log('Đang thực hiện xóa phương án với ID:', optionId);
+        if (confirm('Bạn có chắc chắn muốn xóa phương án này?')) {
             const container = document.getElementById('answer-options-container');
-            const optionCount = container.children.length;
+            const options = container.querySelectorAll('.answer-option');
+            console.log('Tổng số phương án hiện tại:', options.length);
             
-            if (optionCount >= 6) {
-                alert('Số lượng phương án tối đa là 6.');
+            if (options.length <= 2) {
+                alert('Phải có ít nhất 2 phương án trả lời.');
                 return;
             }
             
-            const optionLetter = String.fromCharCode(65 + optionCount);
-            const newOptionId = optionCount;
+            // Tìm và xóa phương án theo ID
+            let removed = false;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].dataset.optionId == optionId) {
+                    console.log('Đã tìm thấy phương án cần xóa:', options[i]);
+                    options[i].remove();
+                    removed = true;
+                    break;
+                }
+            }
             
-            const newOption = document.createElement('div');
-            newOption.className = 'answer-option';
-            newOption.dataset.optionId = newOptionId;
+            if (!removed) {
+                console.error('Không tìm thấy phương án với ID:', optionId);
+                return;
+            }
             
-            newOption.innerHTML = `
-                <div class="mb-3">
-                    <label class="form-label required-label">Phương án ${optionLetter}</label>
-                    <textarea class="form-control" name="answers[${newOptionId}][content]" rows="2" required></textarea>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Giải thích (tùy chọn)</label>
-                    <textarea class="form-control" name="answers[${newOptionId}][explanation]" rows="2"></textarea>
-                </div>
-                
-                <div class="is-correct-option">
-                    <div class="form-check">
-                        <input class="form-check-input correct-answer" type="radio" name="correct_answer" id="correct${newOptionId}" value="${newOptionId}">
-                        <label class="form-check-label" for="correct${newOptionId}">
-                            Đây là đáp án đúng
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="remove-option">
-                    <i class="fas fa-times-circle" onclick="removeOption(${newOptionId})"></i>
-                </div>
-            `;
-            
-            container.appendChild(newOption);
-        });
+            // Cập nhật lại nhãn và ID cho các phương án còn lại
+            updateRemainingOptions();
+        }
+    }
+    
+    // Cập nhật lại các phương án còn lại sau khi xóa
+    function updateRemainingOptions() {
+        console.log('Cập nhật lại các phương án còn lại');
+        const container = document.getElementById('answer-options-container');
+        const remainingOptions = container.querySelectorAll('.answer-option');
         
-        // Hàm xóa phương án
-        function removeOption(optionId) {
-            if (confirm('Bạn có chắc chắn muốn xóa phương án này?')) {
+        for (let i = 0; i < remainingOptions.length; i++) {
+            const optionLabel = remainingOptions[i].querySelector('.form-label');
+            optionLabel.textContent = `Phương án ${String.fromCharCode(65 + i)}`;
+            
+            const contentTextarea = remainingOptions[i].querySelector('textarea[name^="answers"][name$="[content]"]');
+            contentTextarea.name = `answers[${i}][content]`;
+            
+            const explanationTextarea = remainingOptions[i].querySelector('textarea[name^="answers"][name$="[explanation]"]');
+            explanationTextarea.name = `answers[${i}][explanation]`;
+            
+            const radioInput = remainingOptions[i].querySelector('.correct-answer');
+            radioInput.id = `correct${i}`;
+            radioInput.value = i;
+            
+            const radioLabel = remainingOptions[i].querySelector('.form-check-label');
+            radioLabel.setAttribute('for', `correct${i}`);
+            
+            // Cập nhật data-option-id
+            remainingOptions[i].dataset.optionId = i;
+            
+            // Cập nhật data-id cho nút xóa
+            const removeButton = remainingOptions[i].querySelector('.remove-option');
+            if (removeButton) {
+                removeButton.setAttribute('data-id', i);
+            }
+        }
+    }
+    
+    // Thiết lập nút thêm phương án mới
+    function setupAddOptionButton() {
+        const addButton = document.getElementById('add-option');
+        if (addButton) {
+            addButton.addEventListener('click', function() {
+                console.log('Thêm phương án mới');
                 const container = document.getElementById('answer-options-container');
-                const options = container.querySelectorAll('.answer-option');
+                const optionCount = container.children.length;
                 
-                if (options.length <= 2) {
-                    alert('Phải có ít nhất 2 phương án trả lời.');
+                if (optionCount >= 6) {
+                    alert('Số lượng phương án tối đa là 6.');
                     return;
                 }
                 
-                // Tìm và xóa phương án theo ID
-                for (let i = 0; i < options.length; i++) {
-                    if (options[i].dataset.optionId == optionId) {
-                        options[i].remove();
+                const optionLetter = String.fromCharCode(65 + optionCount);
+                const newOptionId = optionCount;
+                
+                const newOption = document.createElement('div');
+                newOption.className = 'answer-option';
+                newOption.dataset.optionId = newOptionId;
+                
+                newOption.innerHTML = `
+                    <div class="mb-3">
+                        <label class="form-label required-label">Phương án ${optionLetter}</label>
+                        <textarea class="form-control" name="answers[${newOptionId}][content]" rows="2" required></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Giải thích (tùy chọn)</label>
+                        <textarea class="form-control" name="answers[${newOptionId}][explanation]" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="is-correct-option">
+                        <div class="form-check">
+                            <input class="form-check-input correct-answer" type="radio" name="correct_answer" id="correct${newOptionId}" value="${newOptionId}">
+                            <label class="form-check-label" for="correct${newOptionId}">
+                                Đây là đáp án đúng
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="remove-option" data-id="${newOptionId}">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                `;
+                
+                container.appendChild(newOption);
+                
+                // Gắn sự kiện cho nút xóa mới thêm vào
+                const newRemoveButton = newOption.querySelector('.remove-option');
+                newRemoveButton.addEventListener('click', function() {
+                    console.log('Đã nhấp vào nút xóa mới thêm');
+                    const id = this.getAttribute('data-id');
+                    removeOption(id);
+                });
+            });
+        }
+    }
+    
+    // Khởi tạo các trình soạn thảo CKEditor
+    function initializeCKEditors() {
+        // Khởi tạo CKEditor cho nội dung câu hỏi
+        if (document.querySelector('#content')) {
+            ClassicEditor
+                .create(document.querySelector('#content'))
+                .then(editor => {
+                    editor.model.document.on('change:data', () => {
+                        document.querySelector('#content').value = editor.getData();
+                    });
+                })
+                .catch(error => {
+                    console.error('Lỗi khi khởi tạo CKEditor cho nội dung:', error);
+                });
+        }
+        
+        // Khởi tạo CKEditor cho các trường khác tùy theo loại câu hỏi
+        const questionType = document.querySelector('input[name="question_type"]').value;
+        
+        // Khởi tạo cho câu hỏi tự luận hoặc tình huống
+        if (questionType === 'Tự luận' || questionType === 'Tình huống') {
+            // Khởi tạo CKEditor cho đáp án tự luận
+            if (document.querySelector('#essayAnswer')) {
+                ClassicEditor
+                    .create(document.querySelector('#essayAnswer'))
+                    .then(editor => {
+                        editor.model.document.on('change:data', () => {
+                            document.querySelector('#essayAnswer').value = editor.getData();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Lỗi khi khởi tạo CKEditor cho đáp án:', error);
+                    });
+            }
+            
+            // Khởi tạo CKEditor cho tiêu chí chấm điểm
+            if (document.querySelector('#gradingRubric')) {
+                ClassicEditor
+                    .create(document.querySelector('#gradingRubric'))
+                    .then(editor => {
+                        editor.model.document.on('change:data', () => {
+                            document.querySelector('#gradingRubric').value = editor.getData();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Lỗi khi khởi tạo CKEditor cho tiêu chí chấm điểm:', error);
+                    });
+            }
+        }
+        
+        // Khởi tạo cho câu hỏi thực hành
+        if (questionType === 'Thực hành') {
+            if (document.querySelector('#practicalInstructions')) {
+                ClassicEditor
+                    .create(document.querySelector('#practicalInstructions'))
+                    .then(editor => {
+                        editor.model.document.on('change:data', () => {
+                            document.querySelector('#practicalInstructions').value = editor.getData();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Lỗi khi khởi tạo CKEditor cho hướng dẫn:', error);
+                    });
+            }
+            
+            if (document.querySelector('#evaluationCriteria')) {
+                ClassicEditor
+                    .create(document.querySelector('#evaluationCriteria'))
+                    .then(editor => {
+                        editor.model.document.on('change:data', () => {
+                            document.querySelector('#evaluationCriteria').value = editor.getData();
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Lỗi khi khởi tạo CKEditor cho tiêu chí đánh giá:', error);
+                    });
+            }
+        }
+    }
+    
+    // Xử lý form submit
+    function setupFormSubmit() {
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            // Ngăn chặn submit mặc định
+            e.preventDefault();
+            
+            // Xử lý đáp án cho câu hỏi trắc nghiệm
+            const questionType = document.querySelector('input[name="question_type"]').value;
+            if (questionType === 'Trắc nghiệm') {
+                // Lấy giá trị của correct_answer
+                const correctAnswerRadios = document.querySelectorAll('input[name="correct_answer"]');
+                let correctIndex = null;
+                let hasCheckedAnswer = false;
+                
+                for (let i = 0; i < correctAnswerRadios.length; i++) {
+                    if (correctAnswerRadios[i].checked) {
+                        correctIndex = correctAnswerRadios[i].value;
+                        hasCheckedAnswer = true;
                         break;
                     }
                 }
                 
-                // Cập nhật lại nhãn và ID cho các phương án còn lại
-                const remainingOptions = container.querySelectorAll('.answer-option');
-                for (let i = 0; i < remainingOptions.length; i++) {
-                    const optionLabel = remainingOptions[i].querySelector('.form-label');
-                    optionLabel.textContent = `Phương án ${String.fromCharCode(65 + i)}`;
-                    
-                    const contentTextarea = remainingOptions[i].querySelector('textarea[name^="answers"][name$="[content]"]');
-                    contentTextarea.name = `answers[${i}][content]`;
-                    
-                    const explanationTextarea = remainingOptions[i].querySelector('textarea[name^="answers"][name$="[explanation]"]');
-                    explanationTextarea.name = `answers[${i}][explanation]`;
-                    
-                    const radioInput = remainingOptions[i].querySelector('.correct-answer');
-                    radioInput.id = `correct${i}`;
-                    radioInput.value = i;
-                    
-                    const radioLabel = remainingOptions[i].querySelector('.form-check-label');
-                    radioLabel.setAttribute('for', `correct${i}`);
-                    
-                    remainingOptions[i].dataset.optionId = i;
+                // Kiểm tra xem đã chọn đáp án đúng chưa
+                if (!hasCheckedAnswer) {
+                    alert('Vui lòng chọn một đáp án đúng');
+                    return;
+                }
+                
+                // Thêm trường is_correct cho mỗi câu trả lời
+                if (correctIndex !== null) {
+                    const answerOptions = document.querySelectorAll('.answer-option');
+                    for (let i = 0; i < answerOptions.length; i++) {
+                        // Tạo input ẩn để đánh dấu câu trả lời đúng
+                        const isCorrectInput = document.createElement('input');
+                        isCorrectInput.type = 'hidden';
+                        isCorrectInput.name = `answers[${i}][is_correct]`;
+                        isCorrectInput.value = (i == correctIndex) ? '1' : '0';
+                        answerOptions[i].appendChild(isCorrectInput);
+                    }
                 }
             }
-        }
-    @elseif($question->type == 'Tự luận' || $question->type == 'Tình huống')
-        // Khởi tạo CKEditor cho đáp án tự luận
-        ClassicEditor
-            .create(document.querySelector('#essayAnswer'))
-            .then(editor => {
-                editor.model.document.on('change:data', () => {
-                    document.querySelector('#essayAnswer').value = editor.getData();
-                });
-            })
-            .catch(error => {
-                console.error(error);
-            });
             
-        // Khởi tạo CKEditor cho tiêu chí chấm điểm
-        ClassicEditor
-            .create(document.querySelector('#gradingRubric'))
-            .then(editor => {
-                editor.model.document.on('change:data', () => {
-                    document.querySelector('#gradingRubric').value = editor.getData();
-                });
-            })
-            .catch(error => {
-                console.error(error);
-            });
-    @elseif($question->type == 'Thực hành')
-        // Khởi tạo CKEditor cho hướng dẫn thực hành
-        ClassicEditor
-            .create(document.querySelector('#practicalInstructions'))
-            .then(editor => {
-                editor.model.document.on('change:data', () => {
-                    document.querySelector('#practicalInstructions').value = editor.getData();
-                });
-            })
-            .catch(error => {
-                console.error(error);
-            });
-            
-        // Khởi tạo CKEditor cho tiêu chí đánh giá
-        ClassicEditor
-            .create(document.querySelector('#evaluationCriteria'))
-            .then(editor => {
-                editor.model.document.on('change:data', () => {
-                    document.querySelector('#evaluationCriteria').value = editor.getData();
-                });
-            })
-            .catch(error => {
-                console.error(error);
-            });
-    @endif
+            // Submit form
+            form.submit();
+        });
+    }
 </script>
 @endsection 

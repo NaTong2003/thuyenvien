@@ -302,7 +302,7 @@ class ReportController extends Controller
      */
     public function attemptReport($id)
     {
-        $attempt = TestAttempt::with(['test', 'user', 'userResponses.question', 'userResponses.answer'])
+        $attempt = TestAttempt::with(['test', 'user', 'userResponses.question', 'userResponses.answer', 'certificates'])
                               ->findOrFail($id);
         
         // Tính toán thông tin bổ sung cần thiết cho view
@@ -335,6 +335,9 @@ class ReportController extends Controller
         // Kiểm tra trạng thái đạt/không đạt
         $isPassed = ($attempt->score >= $test->passing_score);
         
+        // Kiểm tra nếu đã có chứng chỉ được cấp
+        $hasCertificate = $attempt->certificates()->count() > 0;
+        
         return view('admin.reports.attempt_detail', compact(
             'attempt', 
             'test', 
@@ -344,7 +347,8 @@ class ReportController extends Controller
             'incorrectAnswers', 
             'accuracy', 
             'isPassed',
-            'duration'
+            'duration',
+            'hasCertificate'
         ));
     }
     

@@ -122,6 +122,26 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="category_id" class="form-label">Danh mục</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">-- Chọn danh mục --</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="form-text">Chọn danh mục cho câu hỏi</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="category" class="form-label">Tên danh mục khác</label>
+                            <input type="text" class="form-control" id="category" name="category" value="{{ old('category') }}" placeholder="Nhập tên danh mục nếu không có trong danh sách">
+                            <div class="form-text">Nếu không tìm thấy danh mục phù hợp, vui lòng nhập tên danh mục mới</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-section">
@@ -271,6 +291,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.ckeditor.com/ckeditor5/35.0.1/classic/ckeditor.js"></script>
 <script>
     $(document).ready(function() {
         // Xử lý hiển thị/ẩn các phần tùy theo loại câu hỏi
@@ -303,13 +324,18 @@
         $('#add-option').click(function() {
             var optionsCount = $('.answer-option').length;
             
+            if (optionsCount >= 6) {
+                alert('Số lượng phương án tối đa là 6.');
+                return;
+            }
+            
             var newOption = `
-                <div class="answer-option">
+                <div class="answer-option" data-option-id="${optionsCount}">
                     <div class="row">
                         <div class="col-md-8">
                             <div class="mb-2">
                                 <label class="form-label">Nội dung phương án</label>
-                                <input type="text" class="form-control" name="answers[]" placeholder="Nhập nội dung phương án...">
+                                <input type="text" class="form-control" name="answers[${optionsCount}][content]" placeholder="Nhập nội dung phương án...">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -326,7 +352,7 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Giải thích (tùy chọn)</label>
-                        <input type="text" class="form-control" name="explanations[]" placeholder="Giải thích tại sao đáp án này đúng/sai...">
+                        <input type="text" class="form-control" name="answers[${optionsCount}][explanation]" placeholder="Giải thích tại sao đáp án này đúng/sai...">
                     </div>
                     <i class="fas fa-times-circle remove-option"></i>
                 </div>
@@ -348,8 +374,13 @@
         
         // Cập nhật chỉ số của các phương án khi thêm/xóa
         function updateOptionIndexes() {
-            $('.correct-option').each(function(index) {
-                $(this).val(index);
+            $('.answer-option').each(function(index) {
+                $(this).attr('data-option-id', index);
+                
+                // Cập nhật các input trong phương án
+                $(this).find('input[name^="answers"]').attr('name', 'answers[' + index + '][content]');
+                $(this).find('input[name^="explanations"]').attr('name', 'answers[' + index + '][explanation]');
+                $(this).find('.correct-option').val(index);
             });
         }
         
@@ -359,7 +390,7 @@
             $(this).closest('.answer-option').addClass('is-correct');
         });
         
-        // Khởi tạo trình soạn thảo nội dung phong phú nếu cần
+        // Khởi tạo trình soạn thảo nội dung phong phú nếu có thư viện
         if (typeof ClassicEditor !== 'undefined') {
             ClassicEditor
                 .create(document.querySelector('#content'))
@@ -369,6 +400,24 @@
                 
             ClassicEditor
                 .create(document.querySelector('#essay_answer'))
+                .catch(error => {
+                    console.error(error);
+                });
+                
+            ClassicEditor
+                .create(document.querySelector('#grading_rubric'))
+                .catch(error => {
+                    console.error(error);
+                });
+                
+            ClassicEditor
+                .create(document.querySelector('#practical_instructions'))
+                .catch(error => {
+                    console.error(error);
+                });
+                
+            ClassicEditor
+                .create(document.querySelector('#evaluation_criteria'))
                 .catch(error => {
                     console.error(error);
                 });

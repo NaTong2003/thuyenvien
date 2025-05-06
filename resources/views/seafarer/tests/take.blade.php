@@ -83,30 +83,6 @@
         </div>
     </div>
 
-    <!-- Debug thông tin -->
-    <div class="debug-info">
-        <h5>Thông tin debug:</h5>
-        <p>Test ID: {{ $test->id }}</p>
-        <p>Tổng số câu hỏi: {{ $testQuestions->count() }}</p>
-        <p>Thông tin testQuestions: {{ json_encode($testQuestions->take(1)) }}</p>
-        
-        @if($testQuestions->count() > 0)
-            @php
-                $firstQuestion = $testQuestions->first();
-                $question = $firstQuestion->question ?? null;
-            @endphp
-            
-            @if($question)
-                <p>Thông tin câu hỏi đầu tiên: ID={{ $question->id }}, Content={{ $question->content }}</p>
-                <p>Số câu trả lời của câu hỏi đầu tiên: {{ $question->answers->count() }}</p>
-            @else
-                <p>Không thể truy cập thông tin câu hỏi đầu tiên</p>
-                <p>Cấu trúc của $firstQuestion: {{ get_class($firstQuestion) }}</p>
-                <p>Chi tiết: {{ json_encode($firstQuestion) }}</p>
-            @endif
-        @endif
-    </div>
-
     <div class="row">
         <div class="col-md-9">
             <div class="card shadow mb-4">

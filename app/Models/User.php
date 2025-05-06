@@ -70,6 +70,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the certificates for the user.
+     */
+    public function certificates()
+    {
+        return $this->hasMany(Certificate::class);
+    }
+
+    /**
+     * Get the certificates issued by the user.
+     */
+    public function issuedCertificates()
+    {
+        return $this->hasMany(Certificate::class, 'issued_by');
+    }
+
+    /**
      * Check if the user has admin role.
      */
     public function isAdmin()

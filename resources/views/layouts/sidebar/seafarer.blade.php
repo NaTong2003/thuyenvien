@@ -15,6 +15,12 @@
         </a>
     </li>
     <li class="nav-item">
+        <a href="{{ route('seafarer.certificates.index') }}" class="nav-link {{ request()->routeIs('seafarer.certificates*') ? 'active' : '' }}">
+            <i class="fas fa-certificate"></i>
+            Chứng chỉ của tôi
+        </a>
+    </li>
+    <li class="nav-item">
         <a href="{{ route('seafarer.profile.show') }}" class="nav-link {{ request()->routeIs('seafarer.profile*') ? 'active' : '' }}">
             <i class="fas fa-user"></i>
             Hồ sơ cá nhân

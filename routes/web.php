@@ -10,6 +10,8 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Seafarer\DashboardController as SeafarerDashboardController;
 use App\Http\Controllers\Seafarer\TestController as SeafarerTestController;
 use App\Http\Controllers\Seafarer\ProfileController;
+use App\Http\Controllers\Admin\CertificateController;
+use App\Http\Controllers\Seafarer\CertificateController as SeafarerCertificateController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +69,13 @@ Route::prefix('admin')->middleware(['auth', 'isAdmin'])->name('admin.')->group(f
     Route::get('/marking', [ReportController::class, 'markingPage'])->name('reports.marking');
     Route::get('/marking/{attempt}', [ReportController::class, 'markAttempt'])->name('reports.mark.attempt');
     Route::post('/marking/{attempt}', [ReportController::class, 'saveMarking'])->name('reports.save.marking');
+    
+    // Quản lý chứng chỉ
+    Route::resource('certificates', CertificateController::class);
+    Route::get('/certificates/create-from/{attempt}', [CertificateController::class, 'createFromAttempt'])->name('certificates.create.from.attempt');
+    Route::post('/certificates/store-from/{attempt}', [CertificateController::class, 'storeFromAttempt'])->name('certificates.store.from.attempt');
+    Route::get('/certificates/{certificate}/pdf', [CertificateController::class, 'generatePdf'])->name('certificates.pdf');
+    Route::get('/test-history/{user}', [CertificateController::class, 'testHistory'])->name('certificates.test.history');
 });
 
 // Routes cho Thuyền viên
@@ -79,6 +88,11 @@ Route::prefix('seafarer')->middleware(['auth', 'isSeafarer'])->name('seafarer.')
     Route::get('/tests/{test}/start', [SeafarerTestController::class, 'start'])->name('tests.start');
     Route::post('/tests/{test}/submit', [SeafarerTestController::class, 'submit'])->name('tests.submit');
     Route::get('/tests/{testAttempt}/result', [SeafarerTestController::class, 'result'])->name('tests.result');
+    
+    // Quản lý chứng chỉ
+    Route::get('/certificates', [SeafarerCertificateController::class, 'index'])->name('certificates.index');
+    Route::get('/certificates/{certificate}', [SeafarerCertificateController::class, 'show'])->name('certificates.show');
+    Route::get('/certificates/{certificate}/download', [SeafarerCertificateController::class, 'download'])->name('certificates.download');
     
     // Quản lý hồ sơ
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');

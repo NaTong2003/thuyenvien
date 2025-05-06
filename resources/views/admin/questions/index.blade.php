@@ -171,14 +171,7 @@
                     <span class="text-muted">({{ $questions->total() }} câu hỏi)</span>
                 @endif
             </h6>
-            <div>
-                <a href="#" class="btn btn-sm btn-success me-2">
-                    <i class="fas fa-file-excel me-1"></i> Xuất Excel
-                </a>
-                <a href="#" class="btn btn-sm btn-danger">
-                    <i class="fas fa-file-pdf me-1"></i> Xuất PDF
-                </a>
-            </div>
+           
         </div>
         <div class="card-body">
             <div class="table-responsive">

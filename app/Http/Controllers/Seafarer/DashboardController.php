@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\ThuyenVien;
 use App\Models\Position;
 use Illuminate\Support\Facades\DB;
+use App\Models\Certificate;
 
 class DashboardController extends Controller
 {
@@ -61,11 +62,35 @@ class DashboardController extends Controller
                             ->toArray();
         }
         
+        // Lấy thông tin chứng chỉ
+        $activeCertificatesCount = Certificate::where('user_id', $user->id)
+                                    ->where('status', 'active')
+                                    ->where(function($query) {
+                                        $query->whereNull('expiry_date')
+                                            ->orWhere('expiry_date', '>', now());
+                                    })
+                                    ->count();
+        
+        $expiringSoonCertificatesCount = Certificate::where('user_id', $user->id)
+                                    ->where('status', 'active')
+                                    ->whereNotNull('expiry_date')
+                                    ->where('expiry_date', '>', now())
+                                    ->where('expiry_date', '<=', now()->addDays(30))
+                                    ->count();
+        
+        $recentCertificates = Certificate::where('user_id', $user->id)
+                                ->orderBy('created_at', 'desc')
+                                ->take(3)
+                                ->get();
+        
         return view('seafarer.dashboard', compact(
             'thuyenVien',
             'recentTestAttempts',
             'availableTests',
-            'skillScores'
+            'skillScores',
+            'activeCertificatesCount',
+            'expiringSoonCertificatesCount',
+            'recentCertificates'
         ));
     }
 }

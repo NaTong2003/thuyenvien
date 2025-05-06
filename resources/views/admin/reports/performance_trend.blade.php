@@ -163,21 +163,7 @@
                 </div>
             </div>
             
-            <div class="card filter-card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-download me-2"></i> Xuất báo cáo</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="#" class="btn btn-outline-primary">
-                            <i class="fas fa-file-excel me-1"></i> Xuất Excel
-                        </a>
-                        <a href="#" class="btn btn-outline-danger">
-                            <i class="fas fa-file-pdf me-1"></i> Xuất PDF
-                        </a>
-                    </div>
-                </div>
-            </div>
+         
         </div>
         
         <div class="col-lg-9">

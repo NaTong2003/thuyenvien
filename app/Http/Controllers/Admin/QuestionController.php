@@ -8,6 +8,7 @@ use App\Models\Question;
 use App\Models\Answer;
 use App\Models\Position;
 use App\Models\ShipType;
+use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -18,7 +19,7 @@ class QuestionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Question::with('position', 'shipType');
+        $query = Question::with('position', 'shipType', 'category');
         
         // Lọc theo chức danh
         if ($request->has('position_id') && !empty($request->position_id)) {
@@ -28,6 +29,11 @@ class QuestionController extends Controller
         // Lọc theo loại tàu
         if ($request->has('ship_type_id') && !empty($request->ship_type_id)) {
             $query->where('ship_type_id', $request->ship_type_id);
+        }
+        
+        // Lọc theo danh mục
+        if ($request->has('category_id') && !empty($request->category_id)) {
+            $query->where('category_id', $request->category_id);
         }
         
         // Lọc theo loại câu hỏi
@@ -43,8 +49,9 @@ class QuestionController extends Controller
         $questions = $query->orderBy('created_at', 'desc')->paginate(10);
         $positions = Position::all();
         $shipTypes = ShipType::all();
+        $categories = Category::all();
         
-        return view('admin.questions.index', compact('questions', 'positions', 'shipTypes'));
+        return view('admin.questions.index', compact('questions', 'positions', 'shipTypes', 'categories'));
     }
 
     /**
@@ -54,8 +61,9 @@ class QuestionController extends Controller
     {
         $positions = Position::all();
         $shipTypes = ShipType::all();
+        $categories = Category::all();
         
-        return view('admin.questions.create', compact('positions', 'shipTypes'));
+        return view('admin.questions.create', compact('positions', 'shipTypes', 'categories'));
     }
 
     /**
@@ -65,11 +73,12 @@ class QuestionController extends Controller
     {
         $request->validate([
             'content' => 'required|string',
-            'question_type' => 'required|in:multiple_choice,true_false,essay',
+            'question_type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
             'position_id' => 'nullable|exists:positions,id',
             'ship_type_id' => 'nullable|exists:ship_types,id',
-            'difficulty' => 'required|integer|min:1|max:5',
-            'category' => 'required|string|max:50',
+            'category_id' => 'nullable|exists:categories,id',
+            'difficulty' => 'required|in:Dễ,Trung bình,Khó',
+            'category' => 'required_without:category_id|string|max:50',
             'explanation' => 'nullable|string',
             'answers' => 'required_if:question_type,multiple_choice,true_false|array|min:2',
             'answers.*.content' => 'required_if:question_type,multiple_choice,true_false|string',
@@ -85,13 +94,14 @@ class QuestionController extends Controller
                 'question_type' => $request->question_type,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
+                'category_id' => $request->category_id,
                 'difficulty' => $request->difficulty,
                 'category' => $request->category,
                 'explanation' => $request->explanation,
             ]);
             
             // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm hoặc đúng/sai
-            if (in_array($request->question_type, ['multiple_choice', 'true_false']) && !empty($request->answers)) {
+            if ($request->question_type == 'Trắc nghiệm' && !empty($request->answers)) {
                 foreach ($request->answers as $answerData) {
                     Answer::create([
                         'question_id' => $question->id,
@@ -116,7 +126,7 @@ class QuestionController extends Controller
      */
     public function show($id)
     {
-        $question = Question::with(['position', 'shipType', 'answers'])
+        $question = Question::with(['position', 'shipType', 'category', 'answers'])
                             ->findOrFail($id);
         
         return view('admin.questions.show', compact('question'));
@@ -130,8 +140,9 @@ class QuestionController extends Controller
         $question = Question::with('answers')->findOrFail($id);
         $positions = Position::all();
         $shipTypes = ShipType::all();
+        $categories = Category::all();
         
-        return view('admin.questions.edit', compact('question', 'positions', 'shipTypes'));
+        return view('admin.questions.edit', compact('question', 'positions', 'shipTypes', 'categories'));
     }
 
     /**
@@ -143,11 +154,12 @@ class QuestionController extends Controller
         
         $request->validate([
             'content' => 'required|string',
-            'question_type' => 'required|in:multiple_choice,true_false,essay',
+            'question_type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
             'position_id' => 'nullable|exists:positions,id',
             'ship_type_id' => 'nullable|exists:ship_types,id',
-            'difficulty' => 'required|integer|min:1|max:5',
-            'category' => 'required|string|max:50',
+            'category_id' => 'nullable|exists:categories,id',
+            'difficulty' => 'required|in:Dễ,Trung bình,Khó',
+            'category' => 'required_without:category_id|string|max:50',
             'explanation' => 'nullable|string',
             'answers' => 'required_if:question_type,multiple_choice,true_false|array|min:2',
             'answers.*.content' => 'required_if:question_type,multiple_choice,true_false|string',
@@ -163,13 +175,14 @@ class QuestionController extends Controller
                 'question_type' => $request->question_type,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
+                'category_id' => $request->category_id,
                 'difficulty' => $request->difficulty,
                 'category' => $request->category,
                 'explanation' => $request->explanation,
             ]);
             
             // Cập nhật các câu trả lời nếu là câu hỏi trắc nghiệm hoặc đúng/sai
-            if (in_array($request->question_type, ['multiple_choice', 'true_false']) && !empty($request->answers)) {
+            if ($request->question_type == 'Trắc nghiệm' && !empty($request->answers)) {
                 // Xóa tất cả câu trả lời cũ
                 $question->answers()->delete();
                 
