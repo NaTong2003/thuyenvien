@@ -572,18 +572,37 @@
                     return;
                 }
                 
-                // Thêm trường is_correct cho mỗi câu trả lời
-                if (correctIndex !== null) {
-                    const answerOptions = document.querySelectorAll('.answer-option');
-                    for (let i = 0; i < answerOptions.length; i++) {
-                        // Tạo input ẩn để đánh dấu câu trả lời đúng
-                        const isCorrectInput = document.createElement('input');
-                        isCorrectInput.type = 'hidden';
-                        isCorrectInput.name = `answers[${i}][is_correct]`;
-                        isCorrectInput.value = (i == correctIndex) ? '1' : '0';
-                        answerOptions[i].appendChild(isCorrectInput);
+                // Chuyển đổi tên trường từ dạng cũ sang dạng mới
+                const answerOptions = document.querySelectorAll('.answer-option');
+                for (let i = 0; i < answerOptions.length; i++) {
+                    // Các textarea nội dung và giải thích
+                    const contentTextarea = answerOptions[i].querySelector('textarea[name^="answers"][name$="[content]"]');
+                    const explanationTextarea = answerOptions[i].querySelector('textarea[name^="answers"][name$="[explanation]"]');
+                    
+                    if (contentTextarea) {
+                        contentTextarea.name = `answers[${i}][content]`;
                     }
+                    
+                    if (explanationTextarea) {
+                        explanationTextarea.name = `answers[${i}][explanation]`;
+                    }
+                    
+                    // Tạo input ẩn để đánh dấu câu trả lời đúng
+                    const isCorrectInput = document.createElement('input');
+                    isCorrectInput.type = 'hidden';
+                    isCorrectInput.name = `answers[${i}][is_correct]`;
+                    isCorrectInput.value = (i == correctIndex) ? '1' : '0';
+                    answerOptions[i].appendChild(isCorrectInput);
                 }
+            }
+            
+            // Đảm bảo trường type luôn được gửi lên
+            if (!form.querySelector('input[name="type"]')) {
+                const typeInput = document.createElement('input');
+                typeInput.type = 'hidden';
+                typeInput.name = 'type';
+                typeInput.value = questionType;
+                form.appendChild(typeInput);
             }
             
             // Submit form

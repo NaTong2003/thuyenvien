@@ -71,7 +71,8 @@ class QuestionController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        // Xác thực dữ liệu đầu vào
+        $rules = [
             'content' => 'required|string',
             'type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
             'position_id' => 'nullable|exists:positions,id',
@@ -79,10 +80,16 @@ class QuestionController extends Controller
             'category_id' => 'required|exists:categories,id',
             'difficulty' => 'required|in:Dễ,Trung bình,Khó',
             'explanation' => 'nullable|string',
-            'answers' => 'required_if:type,Trắc nghiệm|array|min:2',
-            'answers.*' => 'required_if:type,Trắc nghiệm|string',
-            'is_correct' => 'required_if:type,Trắc nghiệm',
-        ]);
+        ];
+        
+        // Thêm quy tắc validation cho câu hỏi trắc nghiệm
+        if ($request->type == 'Trắc nghiệm') {
+            $rules['answers'] = 'required|array|min:2';
+            $rules['answers.*.content'] = 'required|string';
+            $rules['answers.*.is_correct'] = 'nullable';
+        }
+        
+        $request->validate($rules);
         
         DB::beginTransaction();
         
@@ -105,11 +112,17 @@ class QuestionController extends Controller
             
             // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm
             if ($request->type == 'Trắc nghiệm' && !empty($request->answers)) {
-                foreach ($request->answers as $index => $content) {
+                foreach ($request->answers as $index => $answerData) {
+                    $isCorrect = false;
+                    if (isset($answerData['is_correct']) && $answerData['is_correct'] == '1') {
+                        $isCorrect = true;
+                    }
+                    
                     Answer::create([
                         'question_id' => $question->id,
-                        'content' => $content,
-                        'is_correct' => ($request->is_correct == $index) ? true : false,
+                        'content' => $answerData['content'],
+                        'is_correct' => $isCorrect,
+                        'explanation' => $answerData['explanation'] ?? null,
                     ]);
                 }
             }
@@ -155,7 +168,13 @@ class QuestionController extends Controller
     {
         $question = Question::findOrFail($id);
         
-        $request->validate([
+        // Bổ sung trường type nếu không tồn tại trong request
+        if (!$request->has('type')) {
+            $request->merge(['type' => $question->type]);
+        }
+        
+        // Xác thực dữ liệu đầu vào
+        $rules = [
             'content' => 'required|string',
             'type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
             'position_id' => 'nullable|exists:positions,id',
@@ -163,10 +182,16 @@ class QuestionController extends Controller
             'category_id' => 'required|exists:categories,id',
             'difficulty' => 'required|in:Dễ,Trung bình,Khó',
             'explanation' => 'nullable|string',
-            'answers' => 'required_if:type,Trắc nghiệm|array|min:2',
-            'answers.*' => 'required_if:type,Trắc nghiệm|string',
-            'is_correct' => 'required_if:type,Trắc nghiệm',
-        ]);
+        ];
+        
+        // Thêm quy tắc validation cho câu hỏi trắc nghiệm
+        if ($request->type == 'Trắc nghiệm') {
+            $rules['answers'] = 'required|array|min:2';
+            $rules['answers.*.content'] = 'required|string';
+            $rules['answers.*.is_correct'] = 'nullable';
+        }
+        
+        $request->validate($rules);
         
         DB::beginTransaction();
         
@@ -192,11 +217,17 @@ class QuestionController extends Controller
                 $question->answers()->delete();
                 
                 // Thêm câu trả lời mới
-                foreach ($request->answers as $index => $content) {
+                foreach ($request->answers as $index => $answerData) {
+                    $isCorrect = false;
+                    if (isset($answerData['is_correct']) && $answerData['is_correct'] == '1') {
+                        $isCorrect = true;
+                    }
+                    
                     Answer::create([
                         'question_id' => $question->id,
-                        'content' => $content,
-                        'is_correct' => ($request->is_correct == $index) ? true : false,
+                        'content' => $answerData['content'],
+                        'is_correct' => $isCorrect,
+                        'explanation' => $answerData['explanation'] ?? null,
                     ]);
                 }
             }

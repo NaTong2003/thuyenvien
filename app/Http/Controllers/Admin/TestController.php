@@ -465,11 +465,13 @@ class TestController extends Controller
      */
     public function preview($id)
     {
-        $test = Test::with(['questions.question.answers'])
-                     ->findOrFail($id);
+        $test = Test::findOrFail($id);
         
         // Sắp xếp các câu hỏi theo thứ tự
-        $testQuestions = $test->questions()->with('question.answers')->orderBy('order')->get();
+        $testQuestions = TestQuestion::where('test_id', $id)
+                                    ->with('question.answers')
+                                    ->orderBy('order')
+                                    ->get();
         
         return view('admin.tests.preview', compact('test', 'testQuestions'));
     }
