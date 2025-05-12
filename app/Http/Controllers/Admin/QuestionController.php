@@ -73,40 +73,43 @@ class QuestionController extends Controller
     {
         $request->validate([
             'content' => 'required|string',
-            'question_type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
+            'type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
             'position_id' => 'nullable|exists:positions,id',
             'ship_type_id' => 'nullable|exists:ship_types,id',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => 'required|exists:categories,id',
             'difficulty' => 'required|in:Dễ,Trung bình,Khó',
-            'category' => 'required_without:category_id|string|max:50',
             'explanation' => 'nullable|string',
-            'answers' => 'required_if:question_type,multiple_choice,true_false|array|min:2',
-            'answers.*.content' => 'required_if:question_type,multiple_choice,true_false|string',
-            'answers.*.is_correct' => 'nullable|boolean',
+            'answers' => 'required_if:type,Trắc nghiệm|array|min:2',
+            'answers.*' => 'required_if:type,Trắc nghiệm|string',
+            'is_correct' => 'required_if:type,Trắc nghiệm',
         ]);
         
         DB::beginTransaction();
         
         try {
+            // Lấy category name từ category_id để lưu vào database
+            $category = Category::findOrFail($request->category_id);
+            
             // Tạo câu hỏi mới
             $question = Question::create([
                 'content' => $request->content,
-                'question_type' => $request->question_type,
+                'type' => $request->type,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
                 'category_id' => $request->category_id,
                 'difficulty' => $request->difficulty,
-                'category' => $request->category,
+                'category' => $category->name, // Sử dụng tên từ category đã chọn
                 'explanation' => $request->explanation,
+                'created_by' => auth()->id(),
             ]);
             
-            // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm hoặc đúng/sai
-            if ($request->question_type == 'Trắc nghiệm' && !empty($request->answers)) {
-                foreach ($request->answers as $answerData) {
+            // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm
+            if ($request->type == 'Trắc nghiệm' && !empty($request->answers)) {
+                foreach ($request->answers as $index => $content) {
                     Answer::create([
                         'question_id' => $question->id,
-                        'content' => $answerData['content'],
-                        'is_correct' => isset($answerData['is_correct']) ? true : false,
+                        'content' => $content,
+                        'is_correct' => ($request->is_correct == $index) ? true : false,
                     ]);
                 }
             }
@@ -154,44 +157,46 @@ class QuestionController extends Controller
         
         $request->validate([
             'content' => 'required|string',
-            'question_type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
+            'type' => 'required|in:Trắc nghiệm,Tự luận,Tình huống,Mô phỏng,Thực hành',
             'position_id' => 'nullable|exists:positions,id',
             'ship_type_id' => 'nullable|exists:ship_types,id',
-            'category_id' => 'nullable|exists:categories,id',
+            'category_id' => 'required|exists:categories,id',
             'difficulty' => 'required|in:Dễ,Trung bình,Khó',
-            'category' => 'required_without:category_id|string|max:50',
             'explanation' => 'nullable|string',
-            'answers' => 'required_if:question_type,multiple_choice,true_false|array|min:2',
-            'answers.*.content' => 'required_if:question_type,multiple_choice,true_false|string',
-            'answers.*.is_correct' => 'nullable|boolean',
+            'answers' => 'required_if:type,Trắc nghiệm|array|min:2',
+            'answers.*' => 'required_if:type,Trắc nghiệm|string',
+            'is_correct' => 'required_if:type,Trắc nghiệm',
         ]);
         
         DB::beginTransaction();
         
         try {
+            // Lấy category name từ category_id để lưu vào database
+            $category = Category::findOrFail($request->category_id);
+            
             // Cập nhật thông tin câu hỏi
             $question->update([
                 'content' => $request->content,
-                'question_type' => $request->question_type,
+                'type' => $request->type,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
                 'category_id' => $request->category_id,
                 'difficulty' => $request->difficulty,
-                'category' => $request->category,
+                'category' => $category->name, // Sử dụng tên từ category đã chọn
                 'explanation' => $request->explanation,
             ]);
             
-            // Cập nhật các câu trả lời nếu là câu hỏi trắc nghiệm hoặc đúng/sai
-            if ($request->question_type == 'Trắc nghiệm' && !empty($request->answers)) {
+            // Cập nhật các câu trả lời nếu là câu hỏi trắc nghiệm
+            if ($request->type == 'Trắc nghiệm' && !empty($request->answers)) {
                 // Xóa tất cả câu trả lời cũ
                 $question->answers()->delete();
                 
                 // Thêm câu trả lời mới
-                foreach ($request->answers as $answerData) {
+                foreach ($request->answers as $index => $content) {
                     Answer::create([
                         'question_id' => $question->id,
-                        'content' => $answerData['content'],
-                        'is_correct' => isset($answerData['is_correct']) ? true : false,
+                        'content' => $content,
+                        'is_correct' => ($request->is_correct == $index) ? true : false,
                     ]);
                 }
             }
@@ -221,5 +226,48 @@ class QuestionController extends Controller
         
         return redirect()->route('admin.questions.index')
                         ->with('success', 'Xóa câu hỏi thành công!');
+    }
+
+    /**
+     * Đếm số lượng câu hỏi phù hợp với điều kiện lọc
+     */
+    public function count(Request $request)
+    {
+        $query = Question::query();
+        
+        // Lọc theo chức danh
+        if ($request->has('position_id') && !empty($request->position_id)) {
+            $query->where(function($q) use ($request) {
+                $q->where('position_id', $request->position_id)
+                  ->orWhereNull('position_id');
+            });
+        }
+        
+        // Lọc theo loại tàu
+        if ($request->has('ship_type_id') && !empty($request->ship_type_id)) {
+            $query->where(function($q) use ($request) {
+                $q->where('ship_type_id', $request->ship_type_id)
+                  ->orWhereNull('ship_type_id');
+            });
+        }
+        
+        // Lọc theo độ khó
+        if ($request->has('difficulty') && !empty($request->difficulty) && $request->difficulty != '-- Tất cả độ khó --') {
+            $query->where('difficulty', $request->difficulty);
+        }
+        
+        // Lọc theo danh mục
+        if ($request->has('category') && !empty($request->category) && $request->category != '-- Tất cả danh mục --') {
+            $query->where(function($q) use ($request) {
+                $q->where('category', 'like', '%' . $request->category . '%')
+                  ->orWhereHas('category', function($subquery) use ($request) {
+                      $subquery->where('name', 'like', '%' . $request->category . '%');
+                  });
+            });
+        }
+        
+        $count = $query->count();
+        
+        return response()->json(['count' => $count]);
     }
 }

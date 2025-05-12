@@ -303,7 +303,7 @@
                                     </div>
                                     <div>
                                         @if($question->category)
-                                            <span class="small text-muted">Danh mục: {{ $question->category->name }}</span>
+                                            <span class="small text-muted">Danh mục: {{ is_object($question->category) ? $question->category->name : $question->category }}</span>
                                         @endif
                                     </div>
                                 </div>

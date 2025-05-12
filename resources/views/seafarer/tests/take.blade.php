@@ -29,6 +29,10 @@
         height: 40px;
         margin: 5px;
         font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
     }
     
     .question-nav-btn.current {
@@ -62,6 +66,12 @@
         padding: 15px;
         margin-bottom: 20px;
         border-radius: 5px;
+    }
+
+    #question-navigator {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
     }
 </style>
 @endsection
@@ -245,7 +255,7 @@
                     <h6 class="m-0 font-weight-bold text-primary">Danh sách câu hỏi</h6>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex flex-wrap justify-content-center" id="question-navigator">
+                    <div id="question-navigator">
                         @foreach($questions as $index => $testQuestion)
                             <button type="button" 
                                 class="btn btn-outline-secondary question-nav-btn {{ $index == 0 ? 'current' : '' }}" 

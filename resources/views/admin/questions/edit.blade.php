@@ -283,14 +283,6 @@
                             <label for="category" class="form-label">Tên danh mục khác</label>
                             <input type="text" class="form-control" id="category" name="category" value="{{ old('category', $question->category) }}" placeholder="Nhập tên danh mục nếu không có trong danh sách trên">
                         </div>
-                        
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ old('is_active', $question->is_active) ? 'checked' : '' }}>
-                            <label class="form-check-label" for="is_active">
-                                Kích hoạt câu hỏi
-                            </label>
-                            <div class="form-text">Nếu không được chọn, câu hỏi sẽ không xuất hiện trong bài kiểm tra.</div>
-                        </div>
                     </div>
                 </div>
                 

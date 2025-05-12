@@ -10,6 +10,7 @@ use App\Models\TestQuestion;
 use App\Models\TestAttempt;
 use App\Models\Position;
 use App\Models\ShipType;
+use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -140,7 +141,7 @@ class TestController extends Controller
                      ->findOrFail($id);
         
         // Sắp xếp các câu hỏi theo thứ tự
-        $testQuestions = $test->questions()->with('question')->orderBy('order')->get();
+        $testQuestions = TestQuestion::where('test_id', $test->id)->with('question')->orderBy('order')->get();
         
         // Tính toán thống kê
         $stats = [];
@@ -327,8 +328,9 @@ class TestController extends Controller
     {
         $positions = Position::all();
         $shipTypes = ShipType::all();
+        $categories = Category::all();
         
-        return view('admin.tests.create_random', compact('positions', 'shipTypes'));
+        return view('admin.tests.create_random', compact('positions', 'shipTypes', 'categories'));
     }
 
     /**
@@ -374,12 +376,86 @@ class TestController extends Controller
                 'created_by' => auth()->id(),
             ]);
             
+            // Chọn câu hỏi ngẫu nhiên dựa trên các tiêu chí
+            $query = Question::query();
+            
+            // Lọc theo chức danh
+            if ($request->position_id) {
+                $query->where(function($q) use ($request) {
+                    $q->where('position_id', $request->position_id)
+                      ->orWhereNull('position_id');
+                });
+            }
+            
+            // Lọc theo loại tàu
+            if ($request->ship_type_id) {
+                $query->where(function($q) use ($request) {
+                    $q->where('ship_type_id', $request->ship_type_id)
+                      ->orWhereNull('ship_type_id');
+                });
+            }
+            
+            // Lọc theo độ khó
+            if ($request->difficulty && $request->difficulty != '-- Tất cả độ khó --') {
+                $query->where('difficulty', $request->difficulty);
+            }
+            
+            // Lọc theo danh mục
+            if ($request->category && $request->category != '-- Tất cả danh mục --') {
+                // Tìm kiếm câu hỏi có category (chuỗi) hoặc category_id phù hợp
+                $query->where(function($q) use ($request) {
+                    $q->where('category', 'like', '%' . $request->category . '%')
+                      ->orWhereHas('category', function($subquery) use ($request) {
+                          $subquery->where('name', 'like', '%' . $request->category . '%');
+                      });
+                });
+            }
+            
+            // Log để debug
+            logger('Query parameters: ' . json_encode([
+                'position_id' => $request->position_id,
+                'ship_type_id' => $request->ship_type_id,
+                'difficulty' => $request->difficulty,
+                'category' => $request->category,
+                'random_questions_count' => $request->random_questions_count
+            ]));
+            
+            // Lấy tổng số câu hỏi phù hợp với điều kiện
+            $totalAvailableQuestions = $query->count();
+            logger('Total available questions: ' . $totalAvailableQuestions);
+            
+            // Lấy ngẫu nhiên số lượng câu hỏi theo yêu cầu
+            $randomQuestionsCount = min($request->random_questions_count, $totalAvailableQuestions);
+            $randomQuestions = $query->inRandomOrder()->limit($randomQuestionsCount)->get();
+            
+            // Kiểm tra số lượng câu hỏi tìm được
+            if ($randomQuestions->count() == 0) {
+                DB::rollBack();
+                logger('Không tìm thấy câu hỏi nào phù hợp');
+                return redirect()->back()
+                    ->with('error', 'Không tìm thấy câu hỏi phù hợp với tiêu chí đã chọn. Vui lòng thử lại với tiêu chí khác.')
+                    ->withInput();
+            }
+            
+            logger('Found ' . $randomQuestions->count() . ' questions');
+            
+            // Tạo các bản ghi TestQuestion cho bài kiểm tra
+            foreach ($randomQuestions as $index => $question) {
+                TestQuestion::create([
+                    'test_id' => $test->id,
+                    'question_id' => $question->id,
+                    'order' => $index + 1,
+                    'points' => 1.0, // Điểm mặc định cho mỗi câu hỏi
+                ]);
+            }
+            
             DB::commit();
             
-            return redirect()->route('admin.tests.index')
-                            ->with('success', 'Thêm bài kiểm tra ngẫu nhiên thành công!');
+            return redirect()->route('admin.tests.show', $test->id)
+                            ->with('success', 'Thêm bài kiểm tra ngẫu nhiên thành công với ' . $randomQuestions->count() . ' câu hỏi!');
         } catch (\Exception $e) {
             DB::rollBack();
+            logger('Error creating random test: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Đã xảy ra lỗi khi thêm bài kiểm tra: ' . $e->getMessage())->withInput();
         }
     }

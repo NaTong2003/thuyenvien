@@ -36,7 +36,14 @@
                             
                             <div class="col-md-6">
                                 <label for="category" class="form-label">Danh mục <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('category') is-invalid @enderror" id="category" name="category" value="{{ old('category') }}" required>
+                                <select class="form-select @error('category') is-invalid @enderror" id="category" name="category" required>
+                                    <option value="">-- Tất cả danh mục --</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category->name }}" {{ old('category') == $category->name ? 'selected' : '' }}>
+                                            {{ $category->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
                                 @error('category')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -136,6 +143,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                           
                         </div>
                         
                         <div class="mb-3">
@@ -205,6 +213,62 @@
             .catch(error => {
                 console.error(error);
             });
+            
+        // Xử lý nút kiểm tra số lượng câu hỏi có sẵn
+        $('#check-available-questions').on('click', function() {
+            const position_id = $('#position_id').val();
+            const ship_type_id = $('#ship_type_id').val();
+            const difficulty = $('#difficulty').val();
+            const category = $('#category').val();
+            
+            // Hiển thị loader
+            $(this).html('<i class="fas fa-spinner fa-spin me-1"></i> Đang kiểm tra...');
+            
+            // Gửi AJAX request để kiểm tra số lượng câu hỏi
+            $.ajax({
+                url: '{{ route('admin.questions.count') }}',
+                type: 'GET',
+                data: {
+                    position_id: position_id,
+                    ship_type_id: ship_type_id,
+                    difficulty: difficulty,
+                    category: category
+                },
+                success: function(response) {
+                    $('#available-count').text(response.count);
+                    $('#available-questions-info').removeClass('d-none');
+                    
+                    // Cập nhật màu sắc thông báo dựa trên số lượng câu hỏi
+                    if (response.count === 0) {
+                        $('#available-questions-info').removeClass('alert-info').addClass('alert-danger');
+                    } else if (response.count < $('#random_questions_count').val()) {
+                        $('#available-questions-info').removeClass('alert-info alert-danger').addClass('alert-warning');
+                    } else {
+                        $('#available-questions-info').removeClass('alert-danger alert-warning').addClass('alert-info');
+                    }
+                    
+                    // Đặt lại nút
+                    $('#check-available-questions').html('<i class="fas fa-search me-1"></i> Kiểm tra số lượng câu hỏi');
+                    
+                    // Cập nhật giá trị tối đa cho số lượng câu hỏi
+                    if (response.count > 0) {
+                        $('#random_questions_count').attr('max', response.count);
+                        if ($('#random_questions_count').val() > response.count) {
+                            $('#random_questions_count').val(response.count);
+                        }
+                    }
+                },
+                error: function(error) {
+                    console.error('Error checking question count:', error);
+                    $('#available-questions-info').removeClass('d-none alert-info').addClass('alert-danger');
+                    $('#available-count').text('0');
+                    $('#available-questions-info').append('<br><small>Đã xảy ra lỗi khi kiểm tra số câu hỏi</small>');
+                    
+                    // Đặt lại nút
+                    $('#check-available-questions').html('<i class="fas fa-search me-1"></i> Kiểm tra số lượng câu hỏi');
+                }
+            });
+        });
     });
 </script>
 @endsection 

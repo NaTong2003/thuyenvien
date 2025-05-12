@@ -142,12 +142,11 @@
                         <input type="text" class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="Theo tiêu đề, mã bài...">
                     </div>
                     <div class="col-md-6 col-lg-3 mb-3">
-                        <label for="status" class="form-label">Trạng thái</label>
-                        <select class="form-select" id="status" name="status">
+                        <label for="is_active" class="form-label">Trạng thái</label>
+                        <select class="form-select" id="is_active" name="is_active">
                             <option value="">Tất cả trạng thái</option>
-                            <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Đang hoạt động</option>
-                            <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Bản nháp</option>
-                            <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Tạm dừng</option>
+                            <option value="1" {{ request('is_active') == '1' ? 'selected' : '' }}>Đang hoạt động</option>
+                            <option value="0" {{ request('is_active') == '0' ? 'selected' : '' }}>Tạm dừng</option>
                         </select>
                     </div>
                     <div class="col-md-6 col-lg-3 mb-3">
@@ -225,7 +224,6 @@
                             <th>Tiêu đề</th>
                             <th>Loại</th>
                             <th>Thời gian</th>
-                            <th>Số câu</th>
                             <th>Độ khó</th>
                             <th>Thống kê</th>
                             <th>Trạng thái</th>
@@ -263,7 +261,6 @@
                                         @endif
                                     </td>
                                     <td>{{ $test->duration }} phút</td>
-                                    <td>{{ $test->questions_count }}</td>
                                     <td>
                                         @if($test->difficulty == 'Dễ')
                                             <span class="badge difficulty-badge difficulty-easy">Dễ</span>
@@ -283,12 +280,10 @@
                                         </div>
                                     </td>
                                     <td>
-                                        @if($test->status == 'active')
+                                        @if($test->is_active == '1')
                                             <span><span class="test-status status-active"></span>Hoạt động</span>
-                                        @elseif($test->status == 'draft')
-                                            <span><span class="test-status status-draft"></span>Bản nháp</span>
-                                        @else
-                                            <span><span class="test-status status-inactive"></span>Tạm dừng</span>
+                                        @elseif($test->is_active == '0')
+                                            <span><span class="test-status status-draft"></span>Tạm dừng</span>
                                         @endif
                                     </td>
                                     <td>

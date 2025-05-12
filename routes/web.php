@@ -45,6 +45,7 @@ Route::prefix('admin')->middleware(['auth', 'isAdmin'])->name('admin.')->group(f
     
     // Quản lý câu hỏi
     Route::resource('questions', QuestionController::class);
+    Route::get('/questions/count/ajax', [QuestionController::class, 'count'])->name('questions.count');
     
     // Quản lý bài kiểm tra
     Route::resource('tests', AdminTestController::class);

@@ -88,18 +88,6 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="difficulty" class="form-label required-label">Độ khó</label>
-                            <select class="form-select" id="difficulty" name="difficulty" required>
-                                <option value="">-- Chọn độ khó --</option>
-                                <option value="Dễ" {{ old('difficulty') == 'Dễ' ? 'selected' : '' }}>Dễ</option>
-                                <option value="Trung bình" {{ old('difficulty') == 'Trung bình' ? 'selected' : '' }}>Trung bình</option>
-                                <option value="Khó" {{ old('difficulty') == 'Khó' ? 'selected' : '' }}>Khó</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-6">
                             <label for="position_id" class="form-label">Chức danh liên quan</label>
                             <select class="form-select" id="position_id" name="position_id">
                                 <option value="">-- Tất cả chức danh --</option>
@@ -110,6 +98,9 @@
                                 @endforeach
                             </select>
                         </div>
+                    </div>
+                    
+                    <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="ship_type_id" class="form-label">Loại tàu liên quan</label>
                             <select class="form-select" id="ship_type_id" name="ship_type_id">
@@ -121,12 +112,9 @@
                                 @endforeach
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="category_id" class="form-label">Danh mục</label>
-                            <select class="form-select" id="category_id" name="category_id">
+                            <label for="category_id" class="form-label required-label">Danh mục</label>
+                            <select class="form-select" id="category_id" name="category_id" required>
                                 <option value="">-- Chọn danh mục --</option>
                                 @foreach($categories as $category)
                                     <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
@@ -136,10 +124,16 @@
                             </select>
                             <div class="form-text">Chọn danh mục cho câu hỏi</div>
                         </div>
+                    </div>
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <label for="category" class="form-label">Tên danh mục khác</label>
-                            <input type="text" class="form-control" id="category" name="category" value="{{ old('category') }}" placeholder="Nhập tên danh mục nếu không có trong danh sách">
-                            <div class="form-text">Nếu không tìm thấy danh mục phù hợp, vui lòng nhập tên danh mục mới</div>
+                            <label for="difficulty" class="form-label required-label">Độ khó</label>
+                            <select class="form-select" id="difficulty" name="difficulty" required>
+                                <option value="">-- Chọn độ khó --</option>
+                                <option value="Dễ" {{ old('difficulty') == 'Dễ' ? 'selected' : '' }}>Dễ</option>
+                                <option value="Trung bình" {{ old('difficulty') == 'Trung bình' ? 'selected' : '' }}>Trung bình</option>
+                                <option value="Khó" {{ old('difficulty') == 'Khó' ? 'selected' : '' }}>Khó</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -148,9 +142,15 @@
                     <div class="mb-3">
                         <label for="content" class="form-label required-label">Nội dung câu hỏi</label>
                         <div class="editor-container">
-                            <textarea class="form-control" id="content" name="content" rows="5" required>{{ old('content') }}</textarea>
+                            <textarea class="form-control" id="content" name="content" rows="5">{{ old('content') }}</textarea>
                         </div>
                         <div class="form-text">Nhập nội dung câu hỏi chi tiết ở đây.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="explanation" class="form-label">Giải thích / Ghi chú</label>
+                        <textarea class="form-control" id="explanation" name="explanation" rows="3">{{ old('explanation') }}</textarea>
+                        <div class="form-text">Thêm ghi chú hoặc giải thích chung về câu hỏi này nếu cần.</div>
                     </div>
                 </div>
                 
@@ -317,8 +317,95 @@
             }
         });
         
+        // Xử lý danh mục: yêu cầu category khi không chọn category_id
+        $('#category_id').change(function() {
+            if ($(this).val()) {
+                // Nếu đã chọn danh mục, trường danh mục khác không bắt buộc
+                $('#category').removeAttr('required');
+            } else {
+                // Nếu không chọn danh mục, trường danh mục khác bắt buộc
+                $('#category').attr('required', 'required');
+            }
+        });
+        
         // Kích hoạt sự kiện change để hiển thị đúng với loại câu hỏi đã chọn
         $('#type').trigger('change');
+        $('#category_id').trigger('change');
+        
+        // Xử lý validate form trước khi submit
+        $('form').on('submit', function(e) {
+            // Đồng bộ dữ liệu từ các trình soạn thảo CKEditor về textarea gốc
+            if (window.contentEditor) {
+                const contentData = window.contentEditor.getData();
+                $('#content').val(contentData);
+            }
+            
+            if (window.explanationEditor) {
+                const explanationData = window.explanationEditor.getData();
+                $('#explanation').val(explanationData);
+            }
+            
+            // Kiểm tra nội dung câu hỏi
+            if (!$('#content').val().trim()) {
+                e.preventDefault();
+                alert('Vui lòng nhập nội dung câu hỏi!');
+                return false;
+            }
+            
+            // Kiểm tra loại câu hỏi
+            if (!$('#type').val()) {
+                e.preventDefault();
+                alert('Vui lòng chọn loại câu hỏi!');
+                return false;
+            }
+            
+            // Kiểm tra độ khó
+            if (!$('#difficulty').val()) {
+                e.preventDefault();
+                alert('Vui lòng chọn độ khó!');
+                return false;
+            }
+            
+            // Kiểm tra danh mục
+            if (!$('#category_id').val()) {
+                e.preventDefault();
+                alert('Vui lòng chọn danh mục!');
+                return false;
+            }
+            
+            // Kiểm tra câu trả lời nếu là câu hỏi trắc nghiệm
+            if ($('#type').val() === 'Trắc nghiệm') {
+                // Kiểm tra có ít nhất 2 phương án
+                if ($('.answer-option').length < 2) {
+                    e.preventDefault();
+                    alert('Câu hỏi trắc nghiệm phải có ít nhất 2 phương án trả lời!');
+                    return false;
+                }
+                
+                // Kiểm tra các phương án trả lời không được để trống
+                let hasEmptyOption = false;
+                $('.answer-option').each(function() {
+                    if ($(this).find('input[name^="answers"]').val().trim() === '') {
+                        hasEmptyOption = true;
+                    }
+                });
+                
+                if (hasEmptyOption) {
+                    e.preventDefault();
+                    alert('Vui lòng nhập nội dung cho tất cả các phương án trả lời!');
+                    return false;
+                }
+                
+                // Kiểm tra đã chọn đáp án đúng chưa
+                if (!$('input[name="is_correct"]:checked').length) {
+                    e.preventDefault();
+                    alert('Vui lòng chọn đáp án đúng!');
+                    return false;
+                }
+            }
+            
+            return true;
+        });
         
         // Thêm phương án trả lời mới
         $('#add-option').click(function() {
@@ -330,12 +417,12 @@
             }
             
             var newOption = `
-                <div class="answer-option" data-option-id="${optionsCount}">
+                <div class="answer-option">
                     <div class="row">
                         <div class="col-md-8">
                             <div class="mb-2">
                                 <label class="form-label">Nội dung phương án</label>
-                                <input type="text" class="form-control" name="answers[${optionsCount}][content]" placeholder="Nhập nội dung phương án...">
+                                <input type="text" class="form-control" name="answers[]" placeholder="Nhập nội dung phương án...">
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -352,7 +439,7 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Giải thích (tùy chọn)</label>
-                        <input type="text" class="form-control" name="answers[${optionsCount}][explanation]" placeholder="Giải thích tại sao đáp án này đúng/sai...">
+                        <input type="text" class="form-control" name="explanations[]" placeholder="Giải thích tại sao đáp án này đúng/sai...">
                     </div>
                     <i class="fas fa-times-circle remove-option"></i>
                 </div>
@@ -375,11 +462,7 @@
         // Cập nhật chỉ số của các phương án khi thêm/xóa
         function updateOptionIndexes() {
             $('.answer-option').each(function(index) {
-                $(this).attr('data-option-id', index);
-                
-                // Cập nhật các input trong phương án
-                $(this).find('input[name^="answers"]').attr('name', 'answers[' + index + '][content]');
-                $(this).find('input[name^="explanations"]').attr('name', 'answers[' + index + '][explanation]');
+                // Cập nhật giá trị của radio button
                 $(this).find('.correct-option').val(index);
             });
         }
@@ -390,10 +473,22 @@
             $(this).closest('.answer-option').addClass('is-correct');
         });
         
-        // Khởi tạo trình soạn thảo nội dung phong phú nếu có thư viện
+        // Khởi tạo trình soạn thảo CKEditor
         if (typeof ClassicEditor !== 'undefined') {
             ClassicEditor
                 .create(document.querySelector('#content'))
+                .then(editor => {
+                    window.contentEditor = editor;
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+                
+            ClassicEditor
+                .create(document.querySelector('#explanation'))
+                .then(editor => {
+                    window.explanationEditor = editor;
+                })
                 .catch(error => {
                     console.error(error);
                 });
