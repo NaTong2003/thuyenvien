@@ -231,12 +231,12 @@
                                         </div>
                                         <div class="col-md-6">
                                             <div class="mb-2">
-                                                <strong>Thời gian bắt đầu:</strong> {{ $attempt->started_at->format('d/m/Y H:i') }}
+                                                <strong>Thời gian bắt đầu:</strong> {{ $attempt->started_at }}
                                             </div>
                                             <div>
                                                 <strong>Hoàn thành:</strong> 
                                                 @if($attempt->completed_at)
-                                                    {{ $attempt->completed_at->format('d/m/Y H:i') }}
+                                                    {{ $attempt->completed_at }}
                                                 @else
                                                     <span class="text-warning">Chưa hoàn thành</span>
                                                 @endif
