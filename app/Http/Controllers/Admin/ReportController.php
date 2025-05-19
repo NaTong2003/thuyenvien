@@ -152,6 +152,17 @@ class ReportController extends Controller
         $scoreTrend = $secondHalfAvg - $firstHalfAvg;
         $scoreTrendPercent = $firstHalfAvg > 0 ? ($scoreTrend / $firstHalfAvg) * 100 : 0;
         
+        // Lấy danh sách thuyền viên có thành tích tốt nhất
+        $topSeafarers = User::whereHas('role', function($q) {
+                $q->where('name', 'Thuyền viên');
+            })
+            ->withCount('testAttempts')
+            ->withAvg('testAttempts as average_score', 'score')
+            ->having('test_attempts_count', '>', 0)
+            ->orderBy('average_score', 'desc')
+            ->take(5)
+            ->get();
+        
         return view('admin.reports.performance_trend', compact(
             'performanceData',
             'positions',
@@ -161,7 +172,8 @@ class ReportController extends Controller
             'averageScore',
             'scoreTrend',
             'scoreTrendPercent',
-            'dateRange'
+            'dateRange',
+            'topSeafarers'
         ));
     }
     
@@ -526,5 +538,63 @@ class ReportController extends Controller
         $attempt->save();
         
         return $attempt->score;
+    }
+    
+    /**
+     * Xuất danh sách thuyền viên có hiệu suất cao
+     */
+    public function export()
+    {
+        // Tạo header cho file CSV
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="danh_sach_thuyen_vien_hieu_suat_cao.csv"',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0'
+        ];
+
+        // Lấy danh sách thuyền viên có hiệu suất cao
+        $users = User::whereHas('role', function($q) {
+                $q->where('name', 'Thuyền viên');
+            })
+            ->withCount('testAttempts')
+            ->withAvg('testAttempts as average_score', 'score')
+            ->having('test_attempts_count', '>', 0)
+            ->orderBy('average_score', 'desc')
+            ->take(100)
+            ->get();
+
+        // Tạo nội dung file CSV
+        $callback = function() use ($users) {
+            $file = fopen('php://output', 'w');
+            
+            // Thêm BOM (Byte Order Mark) để đảm bảo Excel hiển thị tiếng Việt đúng
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Thêm header
+            fputcsv($file, ['STT', 'Họ và tên', 'Email', 'Chức danh', 'Loại tàu', 'Số lượt thi', 'Điểm trung bình']);
+            
+            // Thêm dữ liệu
+            $index = 1;
+            foreach ($users as $user) {
+                $position = $user->thuyenVien && $user->thuyenVien->position ? $user->thuyenVien->position->name : 'Không có';
+                $shipType = $user->thuyenVien && $user->thuyenVien->shipType ? $user->thuyenVien->shipType->name : 'Không có';
+                
+                fputcsv($file, [
+                    $index++,
+                    $user->name,
+                    $user->email,
+                    $position,
+                    $shipType,
+                    $user->test_attempts_count,
+                    number_format($user->average_score, 2)
+                ]);
+            }
+            
+            fclose($file);
+        };
+        
+        return response()->stream($callback, 200, $headers);
     }
 }

@@ -261,7 +261,7 @@
                     <h6 class="m-0 font-weight-bold text-primary">
                         <i class="fas fa-list me-1"></i> Thuyền viên có hiệu suất cao nhất
                     </h6>
-                    <a href="#" class="btn btn-sm btn-primary">
+                    <a href="{{ route('admin.reports.export') }}" class="btn btn-sm btn-primary">
                         <i class="fas fa-download me-1"></i> Xuất danh sách
                     </a>
                 </div>
@@ -280,29 +280,36 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @for($i = 1; $i <= 5; $i++)
+                                @php $rank = 1; @endphp
+                                @foreach($topSeafarers as $seafarer)
                                     <tr>
-                                        <th scope="row">{{ $i }}</th>
-                                        <td>Nguyễn Văn A{{ $i }}</td>
-                                        <td>Thuyền trưởng</td>
-                                        <td>{{ rand(5, 15) }}</td>
-                                        <td>{{ number_format(rand(85, 98) + rand(0, 99)/100, 2) }}</td>
+                                        <th scope="row">{{ $rank++ }}</th>
+                                        <td>{{ $seafarer->name }}</td>
+                                        <td>{{ $seafarer->thuyenVien && $seafarer->thuyenVien->position ? $seafarer->thuyenVien->position->name : 'Không có' }}</td>
+                                        <td>{{ $seafarer->test_attempts_count }}</td>
+                                        <td>{{ number_format($seafarer->average_score, 2) }}</td>
                                         <td>
-                                            @if(rand(0, 2) == 0)
+                                            @php
+                                                $previousScore = $seafarer->testAttempts()->orderBy('created_at', 'desc')->skip(1)->first()->score ?? 0;
+                                                $latestScore = $seafarer->testAttempts()->orderBy('created_at', 'desc')->first()->score ?? 0;
+                                                $trend = $latestScore - $previousScore;
+                                            @endphp
+                                            
+                                            @if($trend > 0)
                                                 <span class="trend-arrow trend-up"><i class="fas fa-arrow-up"></i></span>
-                                            @elseif(rand(0, 1) == 0)
+                                            @elseif($trend < 0)
                                                 <span class="trend-arrow trend-down"><i class="fas fa-arrow-down"></i></span>
                                             @else
                                                 <span class="trend-arrow trend-neutral"><i class="fas fa-minus"></i></span>
                                             @endif
                                         </td>
                                         <td>
-                                            <a href="#" class="btn btn-sm btn-info">
+                                            <a href="{{ route('admin.reports.seafarer', $seafarer->id) }}" class="btn btn-sm btn-info">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                         </td>
                                     </tr>
-                                @endfor
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -316,25 +323,22 @@
 @section('scripts')
 <script>
     $(document).ready(function() {
+        // Lấy dữ liệu từ PHP
+        var performanceLabels = @json($performanceData->pluck('date')->toArray());
+        var performanceValues = @json($performanceData->pluck('average_score')->toArray());
+        
         // Biểu đồ xu hướng hiệu suất
         const performanceChart = new Chart(
             document.getElementById('performanceChart'),
             {
                 type: 'line',
                 data: {
-                    labels: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9'],
+                    labels: performanceLabels,
                     datasets: [
                         {
                             label: 'Điểm trung bình',
-                            data: [72.5, 73.8, 74.2, 75.0, 74.8, 76.5, 76.2, 77.0, 77.5],
+                            data: performanceValues,
                             borderColor: 'rgb(75, 192, 192)',
-                            tension: 0.1,
-                            fill: false
-                        },
-                        {
-                            label: 'Tỷ lệ đạt',
-                            data: [78.2, 79.5, 80.1, 81.0, 81.2, 82.0, 82.5, 83.0, 83.2],
-                            borderColor: 'rgb(54, 162, 235)',
                             tension: 0.1,
                             fill: false
                         }
