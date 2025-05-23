@@ -92,7 +92,7 @@
         <div class="col-xl-6 col-lg-7">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Thống kê thuyền viên theo chức danh</h6>
+                    <h6 class="m-0 font-weight-bold ">Thống kê thuyền viên theo chức danh</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-area">
@@ -106,7 +106,7 @@
         <div class="col-xl-6 col-lg-5">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Điểm trung bình theo loại bài kiểm tra</h6>
+                    <h6 class="m-0 font-weight-bold ">Điểm trung bình theo loại bài kiểm tra</h6>
                 </div>
                 <div class="card-body">
                     <div class="chart-pie">

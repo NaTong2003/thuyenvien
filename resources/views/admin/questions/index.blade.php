@@ -83,9 +83,14 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Bộ lọc tìm kiếm</h6>
-            <a href="{{ route('admin.questions.create') }}" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus me-1"></i> Thêm câu hỏi mới
-            </a>
+            <div>
+                <button type="button" class="btn btn-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-file-import me-1"></i> Import câu hỏi
+                </button>
+                <a href="{{ route('admin.questions.create') }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i> Thêm câu hỏi mới
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <form action="{{ route('admin.questions.index') }}" method="GET" class="mb-0">
@@ -251,28 +256,188 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Import Câu hỏi -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="importModalLabel"><i class="fas fa-file-import me-2"></i>Import Câu hỏi từ Excel</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle fa-lg me-3"></i>
+                            <div>
+                                <p class="mb-1"><strong>Hướng dẫn import câu hỏi:</strong></p>
+                                <ol class="mb-0">
+                                    <li>Tải xuống file mẫu Excel</li>
+                                    <li>Điền thông tin câu hỏi theo mẫu</li>
+                                    <li>Tải lên file Excel đã điền thông tin</li>
+                                    <li>Kiểm tra kết quả import</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mb-3">
+                        <a href="{{ route('admin.questions.export.template') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-download me-1"></i> Tải xuống file mẫu
+                        </a>
+                    </p>
+                </div>
+                
+                <form action="{{ route('admin.questions.import') }}" method="POST" enctype="multipart/form-data" id="importForm">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="excel_file" class="form-label">File Excel chứa câu hỏi</label>
+                        <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
+                        <div class="form-text">Hỗ trợ định dạng .xlsx, .xls (Excel)</div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="skip_duplicates" name="skip_duplicates" value="1" checked>
+                        <label class="form-check-label" for="skip_duplicates">
+                            Bỏ qua câu hỏi trùng lặp
+                        </label>
+                    </div>
+                    
+                    <div class="progress d-none mb-3" id="import-progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                    </div>
+                    
+                    <div id="import-result" class="d-none mb-3">
+                        <div class="alert alert-success">
+                            <h6 class="alert-heading"><i class="fas fa-check-circle me-1"></i> Import hoàn tất</h6>
+                            <p class="mb-0">Đã import thành công <span id="imported-count">0</span> câu hỏi.</p>
+                            <hr>
+                            <p class="mb-0"><small>Nếu có lỗi xảy ra, vui lòng kiểm tra file log để biết thêm chi tiết.</small></p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Đóng
+                </button>
+                <button type="button" class="btn btn-success" id="btn-import">
+                    <i class="fas fa-upload me-1"></i> Tải lên và import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
-@section('scripts')
+@section('js')
 <script>
     $(document).ready(function() {
-        // Khởi tạo tooltip
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
+        // Xử lý nút import
+        $('#btn-import').on('click', function() {
+            const fileInput = $('#excel_file');
+            
+            // Kiểm tra file đã được chọn chưa
+            if (fileInput[0].files.length === 0) {
+                alert('Vui lòng chọn file Excel để import.');
+                return;
+            }
+            
+            // Kiểm tra định dạng file
+            const fileName = fileInput[0].files[0].name;
+            const fileExt = fileName.split('.').pop().toLowerCase();
+            
+            if (fileExt !== 'xlsx' && fileExt !== 'xls') {
+                alert('Vui lòng chọn file Excel có định dạng .xlsx hoặc .xls');
+                return;
+            }
+            
+            // Hiển thị thanh tiến trình
+            $('#import-progress').removeClass('d-none');
+            
+            // Vô hiệu hóa nút import để tránh click nhiều lần
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Đang import...');
+            
+            // Tạo đối tượng FormData
+            const formData = new FormData($('#importForm')[0]);
+            
+            // Gửi request AJAX
+            $.ajax({
+                url: $('#importForm').attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function() {
+                    const xhr = new window.XMLHttpRequest();
+                    
+                    // Thêm event listener cho tiến trình upload
+                    xhr.upload.addEventListener('progress', function(evt) {
+                        if (evt.lengthComputable) {
+                            const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                            $('#import-progress .progress-bar').css('width', percentComplete + '%');
+                            $('#import-progress .progress-bar').attr('aria-valuenow', percentComplete);
+                        }
+                    }, false);
+                    
+                    return xhr;
+                },
+                success: function(response) {
+                    // Hiển thị kết quả import
+                    $('#import-progress').addClass('d-none');
+                    $('#import-result').removeClass('d-none');
+                    $('#imported-count').text(response.imported_count);
+                    
+                    // Thay đổi nội dung nút
+                    $('#btn-import').prop('disabled', false).html('<i class="fas fa-check-circle me-1"></i> Hoàn tất');
+                    
+                    // Làm mới trang sau 2 giây
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 2000);
+                },
+                error: function(xhr) {
+                    // Hiển thị lỗi
+                    $('#import-progress').addClass('d-none');
+                    
+                    let errorMessage = 'Đã xảy ra lỗi trong quá trình import.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    
+                    // Tạo thông báo lỗi
+                    const errorAlert = `
+                        <div class="alert alert-danger">
+                            <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-1"></i> Lỗi import</h6>
+                            <p class="mb-0">${errorMessage}</p>
+                        </div>
+                    `;
+                    
+                    $('#import-result').html(errorAlert).removeClass('d-none');
+                    
+                    // Khôi phục nút import
+                    $('#btn-import').prop('disabled', false).html('<i class="fas fa-upload me-1"></i> Thử lại');
+                }
+            });
         });
         
-        // Xử lý nút clear filter
+        // Xử lý đóng modal, reset form
+        $('#importModal').on('hidden.bs.modal', function () {
+            $('#importForm')[0].reset();
+            $('#import-progress').addClass('d-none');
+            $('#import-result').addClass('d-none');
+            $('#btn-import').prop('disabled', false).html('<i class="fas fa-upload me-1"></i> Tải lên và import');
+        });
+        
+        // Khởi tạo tooltip cho nội dung câu hỏi
+        $('[data-bs-toggle="tooltip"]').tooltip();
+        
+        // Xử lý xóa bộ lọc
         $('.clear-filter').click(function() {
-            var targetId = $(this).data('target');
-            $('#' + targetId).val('');
-        });
-        
-        // Modal xem trước nội dung (nếu cần)
-        $('.content-preview').click(function() {
-            var content = $(this).data('bs-original-title');
-            $('#contentPreviewModal .modal-body').text(content);
-            $('#contentPreviewModal').modal('show');
+            const target = $(this).data('target');
+            $('#' + target).val('');
         });
     });
 </script>

@@ -237,7 +237,7 @@
                                         </button>
                                     </div>
                                     <div>
-                                        <button type="submit" class="btn btn-success" id="btn-submit" onclick="return confirm('Bạn có chắc chắn muốn nộp bài?')">
+                                        <button type="button" class="btn btn-success" id="btn-submit" data-bs-toggle="modal" data-bs-target="#submit-confirm-modal">
                                             <i class="fas fa-paper-plane me-1"></i> Nộp bài
                                         </button>
                                     </div>
@@ -270,14 +270,6 @@
                     <div class="mt-3">
                         <p class="mb-2"><small>Chú thích:</small></p>
                         <div class="d-flex align-items-center mb-2">
-                            <div class="btn btn-outline-secondary question-nav-btn me-2" style="width: 30px; height: 30px;"></div>
-                            <small>Chưa trả lời</small>
-                        </div>
-                        <div class="d-flex align-items-center mb-2">
-                            <div class="btn btn-outline-secondary question-nav-btn current me-2" style="width: 30px; height: 30px;"></div>
-                            <small>Câu hỏi hiện tại</small>
-                        </div>
-                        <div class="d-flex align-items-center mb-2">
                             <div class="btn btn-success question-nav-btn me-2" style="width: 30px; height: 30px;"></div>
                             <small>Đã trả lời</small>
                         </div>
@@ -303,6 +295,57 @@
     </div>
 </div>
 @endsection
+
+<!-- Modal Xác nhận nộp bài -->
+<div class="modal fade" id="submit-confirm-modal" tabindex="-1" aria-labelledby="submit-confirm-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="submit-confirm-modal-label"><i class="fas fa-paper-plane me-2"></i>Xác nhận nộp bài</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4 text-center">
+                    <i class="fas fa-question-circle text-warning fa-4x mb-3"></i>
+                    <h5>Bạn có chắc chắn muốn nộp bài?</h5>
+                </div>
+                
+                <div class="alert alert-info">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle fa-lg me-3"></i>
+                        <div>
+                            <p class="mb-1"><strong>Thông tin quan trọng:</strong></p>
+                            <ul class="mb-0">
+                                <li>Sau khi nộp bài, bạn sẽ không thể quay lại để tiếp tục làm bài.</li>
+                                <li>Hệ thống sẽ tự động tính điểm các câu trắc nghiệm.</li>
+                                <li>Các câu tự luận/tình huống sẽ được giám khảo chấm điểm.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-2">
+                    <div>
+                        <i class="fas fa-chart-simple me-1"></i> 
+                        <span>Đã làm: <span id="modal-answered-count">0</span>/<span id="modal-total-questions">{{ $questions->count() }}</span> câu</span>
+                    </div>
+                    <div>
+                        <i class="fas fa-bookmark me-1"></i> 
+                        <span>Đã đánh dấu: <span id="modal-marked-count">0</span> câu</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times-circle me-1"></i> Trở lại làm bài
+                </button>
+                <button type="button" class="btn btn-success" id="confirm-submit-btn">
+                    <i class="fas fa-check-circle me-1"></i> Xác nhận nộp bài
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section('js')
 <script>
@@ -484,6 +527,28 @@
         
         // Khôi phục tiến trình khi tải trang
         restoreProgress();
+        
+        // Xử lý modal xác nhận nộp bài
+        $('#submit-confirm-modal').on('show.bs.modal', function () {
+            // Cập nhật số liệu thống kê trong modal
+            $('#modal-answered-count').text(answeredQuestions.size);
+            $('#modal-marked-count').text(markedQuestions.size);
+        });
+        
+        // Xử lý nút xác nhận nộp bài
+        $('#confirm-submit-btn').on('click', function() {
+            // Submit form nộp bài
+            $('#test-form').submit();
+            
+            // Hiển thị thông báo đang nộp bài
+            $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span> Đang nộp bài...');
+            $('.modal-footer button').prop('disabled', true);
+            
+            // Xóa dữ liệu tạm trong localStorage để tránh nhầm lẫn
+            localStorage.removeItem('testProgress_' + {{ $attempt->id }});
+            localStorage.removeItem('testAnswered_' + {{ $attempt->id }});
+            localStorage.removeItem('testMarked_' + {{ $attempt->id }});
+        });
     });
 </script>
 @endsection 

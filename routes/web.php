@@ -46,6 +46,8 @@ Route::prefix('admin')->middleware(['auth', 'isAdmin'])->name('admin.')->group(f
     // Quản lý câu hỏi
     Route::resource('questions', QuestionController::class);
     Route::get('/questions/count/ajax', [QuestionController::class, 'count'])->name('questions.count');
+    Route::get('/questions/export/template', [QuestionController::class, 'exportTemplate'])->name('questions.export.template');
+    Route::post('/questions/import', [QuestionController::class, 'import'])->name('questions.import');
     
     // Quản lý bài kiểm tra
     Route::resource('tests', AdminTestController::class);
