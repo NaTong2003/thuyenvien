@@ -90,4 +90,12 @@ class Test extends Model
     {
         return $this->hasMany(TestAttempt::class);
     }
+
+    /**
+     * The settings for the test.
+     */
+    public function settings()
+    {
+        return $this->hasOne(TestSetting::class);
+    }
 }

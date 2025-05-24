@@ -147,12 +147,15 @@
                         </div>
                         <div class="col-md-4">
                             <label for="filter_difficulty" class="form-label">Chọn độ khó câu hỏi</label>
-                            <select class="form-select" id="filter_difficulty" name="difficulty">
-                                <option value="">Tất cả độ khó</option>
+                            <select class="form-select @error('difficulty') is-invalid @enderror" id="filter_difficulty" name="difficulty">
+                                <option value="">-- Chọn độ khó --</option>
                                 <option value="Dễ" {{ old('difficulty', $test->difficulty) == 'Dễ' ? 'selected' : '' }}>Dễ</option>
                                 <option value="Trung bình" {{ old('difficulty', $test->difficulty) == 'Trung bình' ? 'selected' : '' }}>Trung bình</option>
                                 <option value="Khó" {{ old('difficulty', $test->difficulty) == 'Khó' ? 'selected' : '' }}>Khó</option>
                             </select>
+                            @error('difficulty')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="mt-3 alert alert-info">
@@ -240,6 +243,74 @@
                                 <div>
                                     <button type="button" class="btn btn-sm btn-outline-primary" id="selectAll">Chọn tất cả</button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAll">Bỏ chọn tất cả</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-cog me-2"></i> Cài đặt bài kiểm tra
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="shuffle_questions" name="shuffle_questions" value="1" 
+                                            {{ $test->settings && $test->settings->shuffle_questions ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="shuffle_questions">Xáo trộn câu hỏi</label>
+                                    </div>
+                                    <div class="form-text">Thứ tự câu hỏi sẽ được xáo trộn khi thuyền viên làm bài</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="shuffle_answers" name="shuffle_answers" value="1"
+                                            {{ $test->settings && $test->settings->shuffle_answers ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="shuffle_answers">Xáo trộn đáp án</label>
+                                    </div>
+                                    <div class="form-text">Thứ tự đáp án sẽ được xáo trộn khi thuyền viên làm bài</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="allow_back" name="allow_back" value="1"
+                                            {{ !$test->settings || $test->settings->allow_back ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="allow_back">Cho phép quay lại câu trước</label>
+                                    </div>
+                                    <div class="form-text">Thuyền viên có thể quay lại các câu trước đó trong bài kiểm tra</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="show_result_immediately" name="show_result_immediately" value="1"
+                                            {{ $test->settings && $test->settings->show_result_immediately ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="show_result_immediately">Hiển thị kết quả ngay sau khi làm</label>
+                                    </div>
+                                    <div class="form-text">Thuyền viên sẽ thấy kết quả đúng/sai ngay sau khi nộp bài</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="max_attempts" class="form-label">Tối đa số lần làm</label>
+                                    <select class="form-select" id="max_attempts" name="max_attempts">
+                                        <option value="" {{ (!$test->settings || $test->settings->max_attempts === null) ? 'selected' : '' }}>Không giới hạn</option>
+                                        <option value="1" {{ ($test->settings && $test->settings->max_attempts === 1) ? 'selected' : '' }}>1 lần</option>
+                                        <option value="2" {{ ($test->settings && $test->settings->max_attempts === 2) ? 'selected' : '' }}>2 lần</option>
+                                        <option value="3" {{ ($test->settings && $test->settings->max_attempts === 3) ? 'selected' : '' }}>3 lần</option>
+                                        <option value="5" {{ ($test->settings && $test->settings->max_attempts === 5) ? 'selected' : '' }}>5 lần</option>
+                                        <option value="10" {{ ($test->settings && $test->settings->max_attempts === 10) ? 'selected' : '' }}>10 lần</option>
+                                    </select>
+                                    <div class="form-text">Số lần tối đa mà thuyền viên có thể làm bài kiểm tra này</div>
                                 </div>
                             </div>
                         </div>

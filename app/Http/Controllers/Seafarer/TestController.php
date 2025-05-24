@@ -30,16 +30,8 @@ class TestController extends Controller
         $ship_type_id = $thuyenVien ? $thuyenVien->ship_type_id : null;
         
         // Xây dựng query với các bộ lọc
-        $query = Test::where('is_active', true)
-                    ->where(function($q) use ($position_id) {
-                        $q->where('position_id', $position_id)
-                          ->orWhereNull('position_id');
-                    })
-                    ->where(function($q) use ($ship_type_id) {
-                        $q->where('ship_type_id', $ship_type_id)
-                          ->orWhereNull('ship_type_id');
-                    });
-        
+        $query = Test::where('is_active', true);
+               
         // Lọc theo tìm kiếm
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
@@ -122,12 +114,24 @@ class TestController extends Controller
         // Lấy bài kiểm tra kèm theo các câu hỏi và đáp án (thêm eager loading để lấy cả câu hỏi qua relationship)
         $test = Test::with(['questions' => function($q) {
                     $q->with('answers');
-                }])->findOrFail($id);
+                }, 'settings'])->findOrFail($id);
         
         // Kiểm tra xem bài kiểm tra có được kích hoạt không
         if (!$test->is_active) {
             return redirect()->route('seafarer.tests.index')
                             ->with('error', 'Bài kiểm tra này hiện không khả dụng.');
+        }
+        
+        // Kiểm tra giới hạn số lần làm bài
+        if ($test->settings && $test->settings->max_attempts > 0) {
+            $attemptCount = TestAttempt::where('user_id', auth()->id())
+                                     ->where('test_id', $test->id)
+                                     ->count();
+            
+            if ($attemptCount >= $test->settings->max_attempts) {
+                return redirect()->route('seafarer.tests.show', $test->id)
+                                ->with('error', 'Bạn đã đạt tới giới hạn số lần làm bài kiểm tra này.');
+            }
         }
         
         // Log thông tin để debug
@@ -291,12 +295,31 @@ class TestController extends Controller
         }
         
         // Đối với bài kiểm tra không phải ngẫu nhiên, trộn thứ tự câu hỏi nếu cần
-        if (!$test->is_random && isset($test->shuffle_questions) && $test->shuffle_questions) {
+        if (!$test->is_random && $test->settings && $test->settings->shuffle_questions) {
             $testQuestions = $testQuestions->shuffle();
+        }
+        
+        // Xáo trộn đáp án cho mỗi câu hỏi nếu cần
+        if ($test->settings && $test->settings->shuffle_answers) {
+            $testQuestions->each(function($testQuestion) {
+                // Đảm bảo rằng có câu hỏi và đáp án
+                if (isset($testQuestion->question) && $testQuestion->question->answers) {
+                    // Xáo trộn đáp án
+                    $testQuestion->question->answers = $testQuestion->question->answers->shuffle();
+                }
+            });
         }
         
         // Thiết lập thời gian kết thúc
         session(['test_end_time' => Carbon::now()->addMinutes($test->duration)->timestamp]);
+        
+        // Lưu cài đặt cho lượt thi này vào session
+        session([
+            'test_settings' => [
+                'allow_back' => $test->settings ? $test->settings->allow_back : true,
+                'show_result_immediately' => $test->settings ? $test->settings->show_result_immediately : false,
+            ]
+        ]);
         
         return view('seafarer.tests.take', compact('test', 'attempt', 'testQuestions'));
     }

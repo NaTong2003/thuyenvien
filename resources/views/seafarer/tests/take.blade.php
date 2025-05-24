@@ -549,6 +549,75 @@
             localStorage.removeItem('testAnswered_' + {{ $attempt->id }});
             localStorage.removeItem('testMarked_' + {{ $attempt->id }});
         });
+
+        // Lấy cài đặt bài kiểm tra từ session
+        const allowBack = {{ session('test_settings.allow_back', true) ? 'true' : 'false' }};
+        
+        // Nếu không cho phép quay lại câu trước, ẩn nút quay lại
+        if (!allowBack) {
+            $('.btn-prev').hide();
+        }
+        
+        // Xử lý di chuyển giữa các câu hỏi
+        let currentQuestionIndex = 0;
+        const questionContainerCount = $('.question-container').length;
+        
+        // Hiển thị câu hỏi đầu tiên
+        showQuestion(currentQuestionIndex);
+        updateNavigationButtons();
+        
+        // Xử lý sự kiện nút Next
+        $('.btn-next').click(function() {
+            if (currentQuestionIndex < questionContainerCount - 1) {
+                currentQuestionIndex++;
+                showQuestion(currentQuestionIndex);
+                updateNavigationButtons();
+            }
+        });
+        
+        // Xử lý sự kiện nút Previous nếu được phép
+        $('.btn-prev').click(function() {
+            if (allowBack && currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion(currentQuestionIndex);
+                updateNavigationButtons();
+            }
+        });
+        
+        // Hiển thị câu hỏi theo index
+        function showQuestion(index) {
+            $('.question-container').hide();
+            $('.question-container').eq(index).show();
+            
+            // Cập nhật tiêu đề hiển thị số câu hiện tại
+            $('.current-question').text(index + 1);
+        }
+        
+        // Cập nhật trạng thái các nút điều hướng
+        function updateNavigationButtons() {
+            // Nút Previous
+            if (currentQuestionIndex === 0 || !allowBack) {
+                $('.btn-prev').prop('disabled', true);
+            } else {
+                $('.btn-prev').prop('disabled', false);
+            }
+            
+            // Nút Next
+            if (currentQuestionIndex === questionContainerCount - 1) {
+                $('.btn-next').hide();
+                $('.btn-submit').show();
+            } else {
+                $('.btn-next').show();
+                $('.btn-submit').hide();
+            }
+        }
+        
+        // Xác nhận khi nộp bài
+        $('.btn-submit').click(function(e) {
+            if (!confirm('Bạn có chắc chắn muốn nộp bài kiểm tra?')) {
+                e.preventDefault();
+            }
+        });
     });
 </script>
 @endsection 

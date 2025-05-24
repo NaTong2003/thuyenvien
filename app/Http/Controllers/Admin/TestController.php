@@ -12,6 +12,7 @@ use App\Models\Position;
 use App\Models\ShipType;
 use App\Models\Category;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class TestController extends Controller
@@ -67,6 +68,9 @@ class TestController extends Controller
     public function store(Request $request)
     {
         try {
+            // Ghi log request data để debug
+            Log::info('Test store request data: ' . json_encode($request->all()));
+            
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
@@ -82,8 +86,16 @@ class TestController extends Controller
                 'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
                 'difficulty' => 'required|string',
                 'type' => 'required|string',
+                // Thêm validation cho các cài đặt bài kiểm tra
+                'shuffle_questions' => 'nullable|boolean',
+                'shuffle_answers' => 'nullable|boolean',
+                'allow_back' => 'nullable|boolean',
+                'show_result_immediately' => 'nullable|boolean',
+                'max_attempts' => 'nullable|integer|min:0',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            // Ghi log lỗi validation
+            Log::error('Test validation errors: ' . json_encode($e->errors()));
             return redirect()->back()->withErrors($e->validator)->withInput();
         }
         
@@ -104,6 +116,15 @@ class TestController extends Controller
                 'difficulty' => $request->difficulty,
                 'type' => $request->type,
                 'created_by' => auth()->id(),
+            ]);
+            
+            // Tạo cài đặt cho bài kiểm tra
+            $test->settings()->create([
+                'shuffle_questions' => $request->has('shuffle_questions'),
+                'shuffle_answers' => $request->has('shuffle_answers'),
+                'allow_back' => $request->has('allow_back'),
+                'show_result_immediately' => $request->has('show_result_immediately'),
+                'max_attempts' => $request->max_attempts ?? null,
             ]);
             
             // Nếu không phải bài kiểm tra ngẫu nhiên, thêm các câu hỏi cố định
@@ -218,6 +239,9 @@ class TestController extends Controller
         $test = Test::findOrFail($id);
         
         try {
+            // Ghi log request data để debug
+            Log::info('Test update request data: ' . json_encode($request->all()));
+            
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'required|string',
@@ -233,8 +257,16 @@ class TestController extends Controller
                 'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
                 'difficulty' => 'required|string',
                 'type' => 'required|string',
+                // Thêm validation cho các cài đặt bài kiểm tra
+                'shuffle_questions' => 'nullable|boolean',
+                'shuffle_answers' => 'nullable|boolean',
+                'allow_back' => 'nullable|boolean',
+                'show_result_immediately' => 'nullable|boolean',
+                'max_attempts' => 'nullable|integer|min:0',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            // Ghi log lỗi validation
+            Log::error('Test update validation errors: ' . json_encode($e->errors()));
             return redirect()->back()->withErrors($e->validator)->withInput();
         }
         
@@ -255,6 +287,18 @@ class TestController extends Controller
                 'difficulty' => $request->difficulty,
                 'type' => $request->type,
             ]);
+            
+            // Cập nhật hoặc tạo mới cài đặt bài kiểm tra
+            $test->settings()->updateOrCreate(
+                ['test_id' => $test->id],
+                [
+                    'shuffle_questions' => $request->has('shuffle_questions'),
+                    'shuffle_answers' => $request->has('shuffle_answers'),
+                    'allow_back' => $request->has('allow_back'),
+                    'show_result_immediately' => $request->has('show_result_immediately'),
+                    'max_attempts' => $request->max_attempts ?? null,
+                ]
+            );
             
             // Xóa tất cả câu hỏi cũ
             $test->questions()->delete();

@@ -469,56 +469,62 @@
                 </div>
             </div>
             
-            <div class="card shadow">
+            <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-sliders-h me-1"></i> Cài đặt bài kiểm tra
+                        <i class="fas fa-cog me-2"></i> Cài đặt bài kiểm tra
                     </h6>
                 </div>
-                <div class="card-body p-0">
-                    <div class="meta-item">
-                        <div class="meta-label">Xáo trộn câu hỏi</div>
-                        <div class="meta-value">
-                            @if($test->shuffle_questions)
-                                <span class="text-success"><i class="fas fa-check-circle me-1"></i>Có</span>
-                            @else
-                                <span class="text-danger"><i class="fas fa-times-circle me-1"></i>Không</span>
-                            @endif
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Xáo trộn câu hỏi</span>
+                                    @if($test->settings && $test->settings->shuffle_questions)
+                                        <span class="badge bg-success rounded-pill">Có</span>
+                                    @else
+                                        <span class="badge bg-danger rounded-pill">Không</span>
+                                    @endif
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Xáo trộn đáp án</span>
+                                    @if($test->settings && $test->settings->shuffle_answers)
+                                        <span class="badge bg-success rounded-pill">Có</span>
+                                    @else
+                                        <span class="badge bg-danger rounded-pill">Không</span>
+                                    @endif
+                                </li>
+                            </ul>
                         </div>
-                    </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Xáo trộn đáp án</div>
-                        <div class="meta-value">
-                            @if($test->shuffle_answers)
-                                <span class="text-success"><i class="fas fa-check-circle me-1"></i>Có</span>
-                            @else
-                                <span class="text-danger"><i class="fas fa-times-circle me-1"></i>Không</span>
-                            @endif
+                        <div class="col-md-6">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Cho phép quay lại câu trước</span>
+                                    @if(!$test->settings || $test->settings->allow_back)
+                                        <span class="badge bg-success rounded-pill">Có</span>
+                                    @else
+                                        <span class="badge bg-danger rounded-pill">Không</span>
+                                    @endif
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Hiển thị kết quả ngay</span>
+                                    @if($test->settings && $test->settings->show_result_immediately)
+                                        <span class="badge bg-success rounded-pill">Có</span>
+                                    @else
+                                        <span class="badge bg-danger rounded-pill">Không</span>
+                                    @endif
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>Tối đa số lần làm</span>
+                                    @if($test->settings && $test->settings->max_attempts)
+                                        <span class="badge bg-info rounded-pill">{{ $test->settings->max_attempts }} lần</span>
+                                    @else
+                                        <span class="badge bg-secondary rounded-pill">Không giới hạn</span>
+                                    @endif
+                                </li>
+                            </ul>
                         </div>
-                    </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Cho phép quay lại câu trước</div>
-                        <div class="meta-value">
-                            @if($test->allow_back)
-                                <span class="text-success"><i class="fas fa-check-circle me-1"></i>Có</span>
-                            @else
-                                <span class="text-danger"><i class="fas fa-times-circle me-1"></i>Không</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Hiển thị kết quả ngay sau khi làm</div>
-                        <div class="meta-value">
-                            @if($test->show_result)
-                                <span class="text-success"><i class="fas fa-check-circle me-1"></i>Có</span>
-                            @else
-                                <span class="text-danger"><i class="fas fa-times-circle me-1"></i>Không</span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Tối đa số lần làm</div>
-                        <div class="meta-value">{{ $test->max_attempts ? $test->max_attempts : 'Không giới hạn' }}</div>
                     </div>
                 </div>
             </div>
