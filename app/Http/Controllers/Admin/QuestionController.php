@@ -85,8 +85,8 @@ class QuestionController extends Controller
         // Thêm quy tắc validation cho câu hỏi trắc nghiệm
         if ($request->type == 'Trắc nghiệm') {
             $rules['answers'] = 'required|array|min:2';
-            $rules['answers.*.content'] = 'required|string';
-            $rules['answers.*.is_correct'] = 'nullable';
+            $rules['answers.*'] = 'required|string';
+            $rules['is_correct'] = 'required';
         }
         
         $request->validate($rules);
@@ -112,17 +112,14 @@ class QuestionController extends Controller
             
             // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm
             if ($request->type == 'Trắc nghiệm' && !empty($request->answers)) {
-                foreach ($request->answers as $index => $answerData) {
-                    $isCorrect = false;
-                    if (isset($answerData['is_correct']) && $answerData['is_correct'] == '1') {
-                        $isCorrect = true;
-                    }
+                foreach ($request->answers as $index => $answerContent) {
+                    $isCorrect = ($index == $request->is_correct);
                     
                     Answer::create([
                         'question_id' => $question->id,
-                        'content' => $answerData['content'],
+                        'content' => $answerContent,
                         'is_correct' => $isCorrect,
-                        'explanation' => $answerData['explanation'] ?? null,
+                        'explanation' => $request->explanations[$index] ?? null,
                     ]);
                 }
             }
@@ -428,6 +425,9 @@ class QuestionController extends Controller
         $errorCount = 0;
         $errors = [];
         
+        // Log để debug
+        $importLog = [];
+        
         DB::beginTransaction();
         try {
             foreach ($rows as $rowIndex => $row) {
@@ -441,6 +441,13 @@ class QuestionController extends Controller
                 $shipTypeName = trim($row[4] ?? '');
                 $categoryName = trim($row[5] ?? '');
                 
+                // Log dữ liệu đầu vào
+                $rowLog = [
+                    'row' => $rowIndex + 2,
+                    'position_name' => $positionName,
+                    'ship_type_name' => $shipTypeName,
+                ];
+                
                 // Kiểm tra nếu câu hỏi đã tồn tại và chọn bỏ qua
                 if ($skipDuplicates) {
                     $exists = Question::where('content', $content)->exists();
@@ -449,24 +456,44 @@ class QuestionController extends Controller
                     }
                 }
                 
-                // Lấy position_id từ tên
+                // Lấy position_id từ tên - cải thiện tìm kiếm
                 $positionId = null;
                 if (!empty($positionName)) {
-                    $position = Position::where('name', $positionName)->first();
+                    // Tìm kiếm không phân biệt chữ hoa/thường và loại bỏ khoảng trắng đầu/cuối
+                    $position = Position::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($positionName))])->first();
+                    
+                    // Nếu không tìm thấy, thử tìm kiếm gần đúng
+                    if (!$position) {
+                        $position = Position::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower(trim($positionName)) . '%'])->first();
+                    }
+                    
                     $positionId = $position ? $position->id : null;
+                    $rowLog['position_id'] = $positionId;
+                    $rowLog['position_found'] = $position ? true : false;
                 }
                 
-                // Lấy ship_type_id từ tên
+                // Lấy ship_type_id từ tên - cải thiện tìm kiếm
                 $shipTypeId = null;
                 if (!empty($shipTypeName)) {
-                    $shipType = ShipType::where('name', $shipTypeName)->first();
+                    // Tìm kiếm không phân biệt chữ hoa/thường và loại bỏ khoảng trắng đầu/cuối
+                    $shipType = ShipType::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($shipTypeName))])->first();
+                    
+                    // Nếu không tìm thấy, thử tìm kiếm gần đúng
+                    if (!$shipType) {
+                        $shipType = ShipType::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower(trim($shipTypeName)) . '%'])->first();
+                    }
+                    
                     $shipTypeId = $shipType ? $shipType->id : null;
+                    $rowLog['ship_type_id'] = $shipTypeId;
+                    $rowLog['ship_type_found'] = $shipType ? true : false;
                 }
                 
                 // Lấy category_id từ tên
                 $categoryId = null;
                 if (!empty($categoryName)) {
-                    $category = Category::where('name', $categoryName)->first();
+                    // Cải thiện tìm kiếm danh mục
+                    $category = Category::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($categoryName))])->first();
+                    
                     if ($category) {
                         $categoryId = $category->id;
                     } else {
@@ -477,6 +504,8 @@ class QuestionController extends Controller
                         ]);
                         $categoryId = $category->id;
                     }
+                    
+                    $rowLog['category_id'] = $categoryId;
                 }
                 
                 // Kiểm tra các trường bắt buộc
@@ -497,6 +526,8 @@ class QuestionController extends Controller
                     'difficulty' => $difficulty,
                     'created_by' => auth()->id(),
                 ]);
+                
+                $rowLog['question_id'] = $question->id;
                 
                 // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm
                 if ($type == 'Trắc nghiệm') {
@@ -526,7 +557,19 @@ class QuestionController extends Controller
                 }
                 
                 $importedCount++;
+                $importLog[] = $rowLog;
             }
+            
+            // Lưu log import vào file để debug
+            $logFile = storage_path('logs/questions_import_' . date('Y-m-d_H-i-s') . '.json');
+            file_put_contents($logFile, json_encode([
+                'time' => now()->toDateTimeString(),
+                'user' => auth()->user()->name,
+                'imported_count' => $importedCount,
+                'error_count' => $errorCount,
+                'details' => $importLog,
+                'errors' => $errors
+            ], JSON_PRETTY_PRINT));
             
             DB::commit();
             
@@ -540,6 +583,13 @@ class QuestionController extends Controller
             
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Log lỗi
+            \Illuminate\Support\Facades\Log::error('Error importing questions: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return response()->json([
                 'success' => false,
