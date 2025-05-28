@@ -87,9 +87,9 @@
                 <button type="button" class="btn btn-success btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-import me-1"></i> Import câu hỏi
                 </button>
-                <a href="{{ route('admin.questions.create') }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus me-1"></i> Thêm câu hỏi mới
-                </a>
+            <a href="{{ route('admin.questions.create') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i> Thêm câu hỏi mới
+            </a>
             </div>
         </div>
         <div class="card-body">
@@ -362,7 +362,7 @@
             
             // Tạo đối tượng FormData
             const formData = new FormData($('#importForm')[0]);
-            
+        
             // Gửi request AJAX
             $.ajax({
                 url: $('#importForm').attr('action'),

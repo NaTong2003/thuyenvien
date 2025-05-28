@@ -491,9 +491,9 @@
                                     <span>Xáo trộn đáp án</span>
                                     @if($test->settings && $test->settings->shuffle_answers)
                                         <span class="badge bg-success rounded-pill">Có</span>
-                                    @else
+                            @else
                                         <span class="badge bg-danger rounded-pill">Không</span>
-                                    @endif
+                            @endif
                                 </li>
                             </ul>
                         </div>
@@ -503,25 +503,25 @@
                                     <span>Cho phép quay lại câu trước</span>
                                     @if(!$test->settings || $test->settings->allow_back)
                                         <span class="badge bg-success rounded-pill">Có</span>
-                                    @else
+                            @else
                                         <span class="badge bg-danger rounded-pill">Không</span>
-                                    @endif
+                            @endif
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     <span>Hiển thị kết quả ngay</span>
                                     @if($test->settings && $test->settings->show_result_immediately)
                                         <span class="badge bg-success rounded-pill">Có</span>
-                                    @else
+                            @else
                                         <span class="badge bg-danger rounded-pill">Không</span>
-                                    @endif
+                            @endif
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     <span>Tối đa số lần làm</span>
                                     @if($test->settings && $test->settings->max_attempts)
                                         <span class="badge bg-info rounded-pill">{{ $test->settings->max_attempts }} lần</span>
-                                    @else
+                            @else
                                         <span class="badge bg-secondary rounded-pill">Không giới hạn</span>
-                                    @endif
+                            @endif
                                 </li>
                             </ul>
                         </div>

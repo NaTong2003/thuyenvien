@@ -305,12 +305,18 @@ class TestController extends Controller
             
             // Nếu không phải bài kiểm tra ngẫu nhiên, thêm các câu hỏi cố định
             if (!$request->has('is_random')) {
-                foreach ($request->question_ids as $index => $question_id) {
-                    TestQuestion::create([
-                        'test_id' => $test->id,
-                        'question_id' => $question_id,
-                        'order' => $index + 1,
-                    ]);
+                if ($request->has('question_ids') && is_array($request->question_ids)) {
+                    foreach ($request->question_ids as $index => $question_id) {
+                        TestQuestion::create([
+                            'test_id' => $test->id,
+                            'question_id' => $question_id,
+                            'order' => $index + 1,
+                        ]);
+                    }
+                } else {
+                    // Log lỗi nếu không có câu hỏi được chọn
+                    Log::error('Không có câu hỏi nào được chọn trong bài kiểm tra ID: ' . $test->id);
+                    throw new \Exception('Bạn cần chọn ít nhất một câu hỏi cho bài kiểm tra này.');
                 }
             } else {
                 // Lưu thông tin về số lượng câu hỏi ngẫu nhiên
@@ -337,8 +343,17 @@ class TestController extends Controller
         
         // Kiểm tra xem bài kiểm tra đã có ai làm chưa
         if ($test->testAttempts()->count() > 0) {
-            return redirect()->route('admin.tests.index')
-                            ->with('error', 'Không thể xóa bài kiểm tra này vì đã có thuyền viên làm bài!');
+            // Kiểm tra xem có ai làm xong bài chưa
+            $completedAttempts = $test->testAttempts()->where('is_completed', true)->count();
+            
+            if ($completedAttempts > 0) {
+                return redirect()->route('admin.tests.index')
+                                ->with('error', 'Không thể xóa bài kiểm tra này vì đã có thuyền viên hoàn thành bài!');
+            }
+            
+            // Nếu chỉ có các lượt thử chưa hoàn thành, xóa các lượt thử này
+            $test->testAttempts()->where('is_completed', false)->delete();
+            Log::info('Đã xóa ' . ($test->testAttempts()->count() - $completedAttempts) . ' lượt thử chưa hoàn thành của bài kiểm tra ID: ' . $test->id);
         }
         
         // Xóa tất cả câu hỏi của bài kiểm tra

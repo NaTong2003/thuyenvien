@@ -196,30 +196,6 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card report-card shadow">
-                    <div class="card-body text-center">
-                        <div class="report-icon">
-                            <i class="fas fa-chart-pie"></i>
-                        </div>
-                        <h5 class="card-title">Phân tích Chức danh</h5>
-                        <p class="card-text">So sánh hiệu suất giữa các chức danh khác nhau trên tàu.</p>
-                        <a href="#" class="btn btn-primary">Xem báo cáo</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card report-card shadow">
-                    <div class="card-body text-center">
-                        <div class="report-icon">
-                            <i class="fas fa-ship"></i>
-                        </div>
-                        <h5 class="card-title">Phân tích Loại tàu</h5>
-                        <p class="card-text">So sánh hiệu suất giữa các thuyền viên theo loại tàu.</p>
-                        <a href="#" class="btn btn-primary">Xem báo cáo</a>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     

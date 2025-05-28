@@ -237,75 +237,162 @@ class ReportController extends Controller
      */
     public function seafarerReport($userId)
     {
-        $user = User::with('thuyenVien.position')->findOrFail($userId);
+        $user = User::with(['thuyenVien.position', 'thuyenVien.shipType', 'testAttempts.test'])
+                    ->findOrFail($userId);
         
-        // Lấy các lượt thi của thuyền viên
-        $testAttempts = TestAttempt::with(['test.position', 'test.shipType'])
-                        ->where('user_id', $userId)
-                        ->orderBy('created_at', 'desc')
-                        ->get();
-        
-        // Tính điểm trung bình
-        $averageScore = $testAttempts->avg('score') ?? 0;
-        
-        // Tính tỷ lệ đạt
-        $passCount = 0;
-        foreach ($testAttempts as $attempt) {
-            if ($attempt->isPassed()) {
-                $passCount++;
-            }
-        }
-        $passRate = $testAttempts->count() > 0 ? round(($passCount / $testAttempts->count()) * 100, 1) : 0;
-        
-        // Lấy điểm theo từng loại bài kiểm tra
-        $scoresByTestType = Test::join('test_attempts', 'tests.id', '=', 'test_attempts.test_id')
-                            ->where('test_attempts.user_id', $userId)
-                            ->select('tests.title', DB::raw('AVG(test_attempts.score) as average_score'))
-                            ->groupBy('tests.id', 'tests.title')
+    
+        // Lấy tất cả lượt thi của thuyền viên
+        $testAttempts = $user->testAttempts()
+                            ->with(['test', 'userResponses.question', 'userResponses.answer'])
+                            ->orderBy('created_at', 'desc')
                             ->get();
         
-        // Xác định điểm mạnh và điểm yếu dựa trên các kỹ năng
-        $categoriesPerformance = DB::table('test_attempts')
-                        ->join('test_questions', 'test_attempts.test_id', '=', 'test_questions.test_id')
-                        ->join('questions', 'test_questions.question_id', '=', 'questions.id')
-                        ->join('categories', 'questions.category_id', '=', 'categories.id')
-                        ->join('test_answers', function($join) {
-                            $join->on('test_attempts.id', '=', 'test_answers.test_attempt_id')
-                                ->on('questions.id', '=', 'test_answers.question_id');
-                        })
-                        ->where('test_attempts.user_id', $userId)
-                        ->select(
-                            'categories.id',
-                            'categories.name',
-                            DB::raw('COUNT(DISTINCT questions.id) as total_questions'),
-                            DB::raw('SUM(CASE WHEN test_answers.is_correct = 1 THEN 1 ELSE 0 END) as correct_answers')
-                        )
-                        ->groupBy('categories.id', 'categories.name')
-                        ->get();
+        // Tính toán các số liệu thống kê
+        $totalAttempts = $testAttempts->count();
+        $completedAttempts = $testAttempts->where('is_completed', true)->count();
+        $averageScore = $testAttempts->where('is_completed', true)->avg('score') ?? 0;
         
-        $skillsPerformance = [];
-        foreach ($categoriesPerformance as $category) {
-            if ($category->total_questions > 0) {
-                $percentage = ($category->correct_answers / $category->total_questions) * 100;
-                $skillsPerformance[] = [
-                    'name' => $category->name,
-                    'percentage' => round($percentage, 1),
+        // Số lượt đạt/không đạt
+        $passedAttempts = 0;
+        $failedAttempts = 0;
+        
+        foreach ($testAttempts->where('is_completed', true) as $attempt) {
+            if ($attempt->isPassed()) {
+                $passedAttempts++;
+            } else {
+                $failedAttempts++;
+            }
+        }
+        
+        // Tỷ lệ đạt
+        $passRate = $completedAttempts > 0 ? round(($passedAttempts / $completedAttempts) * 100, 1) : 0;
+        
+        // Lấy các chứng chỉ của thuyền viên
+        $certificates = $user->certificates()->with('test')->orderBy('created_at', 'desc')->get();
+        
+        // Dữ liệu cho biểu đồ lịch sử điểm
+        $scoreHistory = $testAttempts->where('is_completed', true)
+                                   ->sortBy('created_at')
+                                   ->map(function($attempt) {
+                                       return [
+                                           'date' => $attempt->created_at->format('d/m/Y'),
+                                           'score' => $attempt->score,
+                                           'test_name' => $attempt->test->title ?? 'N/A',
+                                           'attempt_id' => $attempt->id
+                                       ];
+                                   })->values();
+        
+        // Dữ liệu cho biểu đồ hiệu suất theo loại bài kiểm tra
+        $testPerformance = [];
+        $attemptsByTest = $testAttempts->where('is_completed', true)->groupBy('test_id');
+        
+        foreach ($attemptsByTest as $testId => $attempts) {
+            $test = Test::find($testId);
+            if ($test) {
+                $testPerformance[] = [
+                    'test_name' => $test->title,
+                    'average_score' => $attempts->avg('score'),
+                    'attempts_count' => $attempts->count(),
+                    'test_id' => $testId
                 ];
             }
         }
         
-        // Sắp xếp theo % chính xác
-        usort($skillsPerformance, function($a, $b) {
-            return $b['percentage'] <=> $a['percentage'];
-        });
+        // Dữ liệu cho biểu đồ phân phối điểm số
+        $scoreRanges = [
+            '0-10', '11-20', '21-30', '31-40', '41-50', 
+            '51-60', '61-70', '71-80', '81-90', '91-100'
+        ];
+        
+        $scoreDistribution = array_fill(0, count($scoreRanges), 0);
+        
+        foreach ($testAttempts->where('is_completed', true) as $attempt) {
+            $score = $attempt->score;
+            $index = min(floor($score / 10), 9); // Đảm bảo điểm số 100 nằm trong khoảng 91-100
+            $scoreDistribution[$index]++;
+        }
+        
+        // Phân tích nội dung
+        $strengths = [];
+        $weaknesses = [];
+        
+        // Nếu có ít nhất một lượt thi
+        if ($testAttempts->where('is_completed', true)->count() > 0) {
+            // Phân tích câu trả lời để tìm điểm mạnh/yếu
+            $userResponses = UserResponse::whereIn('test_attempt_id', $testAttempts->pluck('id'))
+                                        ->with(['question', 'answer'])
+                                        ->get();
+            
+            // Nhóm câu trả lời theo danh mục
+            $responsesByCategory = [];
+            
+            foreach ($userResponses as $response) {
+                if (isset($response->question) && $response->question) {
+                    $category = $response->question->category ?? 'Khác';
+                    
+                    if (!isset($responsesByCategory[$category])) {
+                        $responsesByCategory[$category] = [
+                            'total' => 0,
+                            'correct' => 0
+                        ];
+                    }
+                    
+                    $responsesByCategory[$category]['total']++;
+                    
+                    if ($response->isCorrect()) {
+                        $responsesByCategory[$category]['correct']++;
+                    }
+                }
+            }
+            
+            // Xác định điểm mạnh và điểm yếu
+            foreach ($responsesByCategory as $category => $stats) {
+                if ($stats['total'] >= 3) { // Chỉ xét các danh mục có ít nhất 3 câu trả lời
+                    $correctRate = ($stats['correct'] / $stats['total']) * 100;
+                    
+                    if ($correctRate >= 70) {
+                        $strengths[] = [
+                            'category' => $category,
+                            'correct_rate' => round($correctRate, 1),
+                            'total' => $stats['total']
+                        ];
+                    } elseif ($correctRate <= 50) {
+                        $weaknesses[] = [
+                            'category' => $category,
+                            'correct_rate' => round($correctRate, 1),
+                            'total' => $stats['total']
+                        ];
+                    }
+                }
+            }
+            
+            // Sắp xếp điểm mạnh theo tỷ lệ đúng giảm dần
+            usort($strengths, function($a, $b) {
+                return $b['correct_rate'] <=> $a['correct_rate'];
+            });
+            
+            // Sắp xếp điểm yếu theo tỷ lệ đúng tăng dần
+            usort($weaknesses, function($a, $b) {
+                return $a['correct_rate'] <=> $b['correct_rate'];
+            });
+        }
         
         return view('admin.reports.seafarer', compact(
             'user',
             'testAttempts',
+            'totalAttempts',
+            'completedAttempts',
             'averageScore',
+            'passedAttempts',
+            'failedAttempts',
             'passRate',
-            'scoresByTestType',
-            'skillsPerformance'
+            'certificates',
+            'scoreHistory',
+            'testPerformance',
+            'scoreRanges',
+            'scoreDistribution',
+            'strengths',
+            'weaknesses'
         ));
     }
     
