@@ -273,7 +273,7 @@
                             <div>
                                 <p class="mb-1"><strong>Hướng dẫn import câu hỏi:</strong></p>
                                 <ol class="mb-0">
-                                    <li>Tải xuống file mẫu Excel</li>
+                                    <li>Tải xuống file mẫu Excel (đã bao gồm danh sách chức danh và loại tàu hiện có)</li>
                                     <li>Điền thông tin câu hỏi theo mẫu</li>
                                     <li>Tải lên file Excel đã điền thông tin</li>
                                     <li>Kiểm tra kết quả import</li>
@@ -287,36 +287,111 @@
                             <i class="fas fa-download me-1"></i> Tải xuống file mẫu
                         </a>
                     </p>
-                </div>
+                    
+                    <!-- Thêm tab để hiển thị thông tin tham khảo -->
+                    <ul class="nav nav-tabs" id="importTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="import-tab" data-bs-toggle="tab" data-bs-target="#import-content" type="button" role="tab" aria-controls="import-content" aria-selected="true">Import</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="positions-tab" data-bs-toggle="tab" data-bs-target="#positions-content" type="button" role="tab" aria-controls="positions-content" aria-selected="false">Danh sách chức danh</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="shiptypes-tab" data-bs-toggle="tab" data-bs-target="#shiptypes-content" type="button" role="tab" aria-controls="shiptypes-content" aria-selected="false">Danh sách loại tàu</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content p-3 border border-top-0 rounded-bottom" id="importTabsContent">
+                        <div class="tab-pane fade show active" id="import-content" role="tabpanel" aria-labelledby="import-tab">
+                            <form action="{{ route('admin.questions.import') }}" method="POST" enctype="multipart/form-data" id="importForm">
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="excel_file" class="form-label">File Excel chứa câu hỏi</label>
+                                    <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
+                                    <div class="form-text">Hỗ trợ định dạng .xlsx, .xls (Excel)</div>
+                                </div>
                 
-                <form action="{{ route('admin.questions.import') }}" method="POST" enctype="multipart/form-data" id="importForm">
-                    @csrf
-                    <div class="mb-3">
-                        <label for="excel_file" class="form-label">File Excel chứa câu hỏi</label>
-                        <input type="file" class="form-control" id="excel_file" name="excel_file" accept=".xlsx, .xls" required>
-                        <div class="form-text">Hỗ trợ định dạng .xlsx, .xls (Excel)</div>
-                    </div>
-
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="skip_duplicates" name="skip_duplicates" value="1" checked>
-                        <label class="form-check-label" for="skip_duplicates">
-                            Bỏ qua câu hỏi trùng lặp
-                        </label>
-                    </div>
-                    
-                    <div class="progress d-none mb-3" id="import-progress">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
-                    </div>
-                    
-                    <div id="import-result" class="d-none mb-3">
-                        <div class="alert alert-success">
-                            <h6 class="alert-heading"><i class="fas fa-check-circle me-1"></i> Import hoàn tất</h6>
-                            <p class="mb-0">Đã import thành công <span id="imported-count">0</span> câu hỏi.</p>
-                            <hr>
-                            <p class="mb-0"><small>Nếu có lỗi xảy ra, vui lòng kiểm tra file log để biết thêm chi tiết.</small></p>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="skip_duplicates" name="skip_duplicates" value="1" checked>
+                                    <label class="form-check-label" for="skip_duplicates">
+                                        Bỏ qua câu hỏi trùng lặp
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="create_new_entities" name="create_new_entities" value="1">
+                                    <label class="form-check-label" for="create_new_entities">
+                                        Tự động tạo chức danh và loại tàu mới nếu không tìm thấy
+                                    </label>
+                                </div>
+                                
+                                <div class="progress d-none mb-3" id="import-progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                                </div>
+                                
+                                <div id="import-result" class="d-none mb-3">
+                                    <!-- Kết quả import sẽ hiển thị ở đây -->
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="positions-content" role="tabpanel" aria-labelledby="positions-tab">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="position-search" placeholder="Tìm kiếm chức danh...">
+                                <button class="btn btn-outline-secondary" type="button" id="clear-position-search">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-striped table-hover">
+                                    <thead class="sticky-top bg-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Tên chức danh</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="positions-table-body">
+                                        @foreach($positions as $position)
+                                        <tr>
+                                            <td>{{ $position->id }}</td>
+                                            <td>{{ $position->name }}</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="shiptypes-content" role="tabpanel" aria-labelledby="shiptypes-tab">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="shiptype-search" placeholder="Tìm kiếm loại tàu...">
+                                <button class="btn btn-outline-secondary" type="button" id="clear-shiptype-search">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-striped table-hover">
+                                    <thead class="sticky-top bg-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Tên loại tàu</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="shiptypes-table-body">
+                                        @foreach($shipTypes as $shipType)
+                                        <tr>
+                                            <td>{{ $shipType->id }}</td>
+                                            <td>{{ $shipType->name }}</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                </form>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
@@ -335,6 +410,34 @@
 @section('js')
 <script>
     $(document).ready(function() {
+        // Xử lý tìm kiếm chức danh
+        $('#position-search').on('keyup', function() {
+            const searchText = $(this).val().toLowerCase();
+            $('#positions-table-body tr').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+            });
+        });
+        
+        // Xóa tìm kiếm chức danh
+        $('#clear-position-search').on('click', function() {
+            $('#position-search').val('');
+            $('#positions-table-body tr').show();
+        });
+        
+        // Xử lý tìm kiếm loại tàu
+        $('#shiptype-search').on('keyup', function() {
+            const searchText = $(this).val().toLowerCase();
+            $('#shiptypes-table-body tr').filter(function() {
+                $(this).toggle($(this).text().toLowerCase().indexOf(searchText) > -1);
+            });
+        });
+        
+        // Xóa tìm kiếm loại tàu
+        $('#clear-shiptype-search').on('click', function() {
+            $('#shiptype-search').val('');
+            $('#shiptypes-table-body tr').show();
+        });
+
         // Xử lý nút import
         $('#btn-import').on('click', function() {
             const fileInput = $('#excel_file');
@@ -387,16 +490,59 @@
                 success: function(response) {
                     // Hiển thị kết quả import
                     $('#import-progress').addClass('d-none');
-                    $('#import-result').removeClass('d-none');
-                    $('#imported-count').text(response.imported_count);
+                    
+                    let resultHtml = '';
+                    if (response.success) {
+                        resultHtml = `
+                            <div class="alert alert-success">
+                                <h6 class="alert-heading"><i class="fas fa-check-circle me-1"></i> Import hoàn tất</h6>
+                                <p class="mb-0">Đã import thành công <strong>${response.imported_count}</strong> câu hỏi.</p>
+                            </div>
+                        `;
+                        
+                        // Hiển thị cảnh báo về chức danh và loại tàu không tìm thấy nếu có
+                        if (response.warnings && response.warnings.length > 0) {
+                            resultHtml += `
+                                <div class="alert alert-warning">
+                                    <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-1"></i> Cảnh báo</h6>
+                                    <ul class="mb-0">
+                                        ${response.warnings.map(warning => `<li>${warning}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                        }
+                    } else {
+                        resultHtml = `
+                            <div class="alert alert-danger">
+                                <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-1"></i> Lỗi import</h6>
+                                <p class="mb-0">${response.message}</p>
+                            </div>
+                        `;
+                    }
+                    
+                    // Hiển thị lỗi chi tiết nếu có
+                    if (response.errors && response.errors.length > 0) {
+                        resultHtml += `
+                            <div class="alert alert-danger">
+                                <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-1"></i> Lỗi chi tiết</h6>
+                                <ul class="mb-0">
+                                    ${response.errors.map(error => `<li>${error}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                    
+                    $('#import-result').html(resultHtml).removeClass('d-none');
                     
                     // Thay đổi nội dung nút
                     $('#btn-import').prop('disabled', false).html('<i class="fas fa-check-circle me-1"></i> Hoàn tất');
                     
-                    // Làm mới trang sau 2 giây
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 2000);
+                    // Làm mới trang sau 3 giây nếu thành công
+                    if (response.success && response.imported_count > 0) {
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 3000);
+                    }
                 },
                 error: function(xhr) {
                     // Hiển thị lỗi

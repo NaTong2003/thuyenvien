@@ -307,6 +307,7 @@ class QuestionController extends Controller
         // Tạo file Excel mới
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Mẫu câu hỏi');
         
         // Định dạng tiêu đề
         $sheet->getStyle('A1:K1')->getFont()->setBold(true);
@@ -384,6 +385,103 @@ class QuestionController extends Controller
         $sheet->setCellValue('J2', 'Dừng máy tàu');
         $sheet->setCellValue('K2', '1');
         
+        // Thêm sheet hướng dẫn
+        $guideSheet = $spreadsheet->createSheet();
+        $guideSheet->setTitle('Hướng dẫn');
+        
+        // Thiết lập nội dung hướng dẫn
+        $guideSheet->setCellValue('A1', 'HƯỚNG DẪN NHẬP LIỆU');
+        $guideSheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $guideSheet->getStyle('A1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4472C4');
+        $guideSheet->getStyle('A1')->getFont()->getColor()->setRGB('FFFFFF');
+        $guideSheet->mergeCells('A1:D1');
+        
+        $guideSheet->setCellValue('A3', 'Chú ý:');
+        $guideSheet->getStyle('A3')->getFont()->setBold(true);
+        
+        $guideSheet->setCellValue('A4', '1. Các trường bắt buộc: Nội dung câu hỏi, Loại câu hỏi, Độ khó, Danh mục');
+        $guideSheet->setCellValue('A5', '2. Với câu hỏi trắc nghiệm, phải có ít nhất 2 phương án trả lời và chỉ rõ đáp án đúng');
+        $guideSheet->setCellValue('A6', '3. Chức danh và Loại tàu phải nhập chính xác tên như trong hệ thống (xem sheet "Chức danh" và "Loại tàu")');
+        $guideSheet->setCellValue('A7', '4. Nếu không tìm thấy Chức danh hoặc Loại tàu, hệ thống sẽ tự động bỏ qua hoặc tạo mới (tùy thuộc vào tùy chọn khi import)');
+        
+        $guideSheet->getColumnDimension('A')->setWidth(70);
+        
+        // Thêm sheet danh sách chức danh
+        $positionSheet = $spreadsheet->createSheet();
+        $positionSheet->setTitle('Chức danh');
+        
+        // Thiết lập tiêu đề cho sheet chức danh
+        $positionSheet->setCellValue('A1', 'ID');
+        $positionSheet->setCellValue('B1', 'Tên chức danh');
+        $positionSheet->getStyle('A1:B1')->getFont()->setBold(true);
+        $positionSheet->getStyle('A1:B1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4472C4');
+        $positionSheet->getStyle('A1:B1')->getFont()->getColor()->setRGB('FFFFFF');
+        
+        // Lấy danh sách chức danh từ database
+        $positions = Position::orderBy('name')->get();
+        $row = 2;
+        foreach ($positions as $position) {
+            $positionSheet->setCellValue('A' . $row, $position->id);
+            $positionSheet->setCellValue('B' . $row, $position->name);
+            $row++;
+        }
+        
+        $positionSheet->getColumnDimension('A')->setWidth(10);
+        $positionSheet->getColumnDimension('B')->setWidth(40);
+        
+        // Thêm sheet danh sách loại tàu
+        $shipTypeSheet = $spreadsheet->createSheet();
+        $shipTypeSheet->setTitle('Loại tàu');
+        
+        // Thiết lập tiêu đề cho sheet loại tàu
+        $shipTypeSheet->setCellValue('A1', 'ID');
+        $shipTypeSheet->setCellValue('B1', 'Tên loại tàu');
+        $shipTypeSheet->getStyle('A1:B1')->getFont()->setBold(true);
+        $shipTypeSheet->getStyle('A1:B1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4472C4');
+        $shipTypeSheet->getStyle('A1:B1')->getFont()->getColor()->setRGB('FFFFFF');
+        
+        // Lấy danh sách loại tàu từ database
+        $shipTypes = ShipType::orderBy('name')->get();
+        $row = 2;
+        foreach ($shipTypes as $shipType) {
+            $shipTypeSheet->setCellValue('A' . $row, $shipType->id);
+            $shipTypeSheet->setCellValue('B' . $row, $shipType->name);
+            $row++;
+        }
+        
+        $shipTypeSheet->getColumnDimension('A')->setWidth(10);
+        $shipTypeSheet->getColumnDimension('B')->setWidth(40);
+        
+        // Thêm sheet danh mục
+        $categorySheet = $spreadsheet->createSheet();
+        $categorySheet->setTitle('Danh mục');
+        
+        // Thiết lập tiêu đề cho sheet danh mục
+        $categorySheet->setCellValue('A1', 'ID');
+        $categorySheet->setCellValue('B1', 'Tên danh mục');
+        $categorySheet->getStyle('A1:B1')->getFont()->setBold(true);
+        $categorySheet->getStyle('A1:B1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('4472C4');
+        $categorySheet->getStyle('A1:B1')->getFont()->getColor()->setRGB('FFFFFF');
+        
+        // Lấy danh sách danh mục từ database
+        $categories = Category::orderBy('name')->get();
+        $row = 2;
+        foreach ($categories as $category) {
+            $categorySheet->setCellValue('A' . $row, $category->id);
+            $categorySheet->setCellValue('B' . $row, $category->name);
+            $row++;
+        }
+        
+        $categorySheet->getColumnDimension('A')->setWidth(10);
+        $categorySheet->getColumnDimension('B')->setWidth(40);
+        
+        // Đặt sheet chính là active
+        $spreadsheet->setActiveSheetIndex(0);
+        
         // Tạo file và download
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         
@@ -406,10 +504,12 @@ class QuestionController extends Controller
         $request->validate([
             'excel_file' => 'required|file|mimes:xlsx,xls',
             'skip_duplicates' => 'nullable|boolean',
+            'create_new_entities' => 'nullable|boolean',
         ]);
         
         $file = $request->file('excel_file');
         $skipDuplicates = $request->input('skip_duplicates', true);
+        $createNewEntities = $request->input('create_new_entities', false);
         
         // Đọc file Excel
         $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
@@ -444,8 +544,8 @@ class QuestionController extends Controller
                 // Log dữ liệu đầu vào
                 $rowLog = [
                     'row' => $rowIndex + 2,
-                    'position_name' => $positionName,
-                    'ship_type_name' => $shipTypeName,
+                    'position_name_input' => $positionName,
+                    'ship_type_name_input' => $shipTypeName,
                 ];
                 
                 // Kiểm tra nếu câu hỏi đã tồn tại và chọn bỏ qua
@@ -459,12 +559,33 @@ class QuestionController extends Controller
                 // Lấy position_id từ tên - cải thiện tìm kiếm
                 $positionId = null;
                 if (!empty($positionName)) {
-                    // Tìm kiếm không phân biệt chữ hoa/thường và loại bỏ khoảng trắng đầu/cuối
+                    // Tìm kiếm chính xác trước
                     $position = Position::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($positionName))])->first();
                     
-                    // Nếu không tìm thấy, thử tìm kiếm gần đúng
+                    // Nếu không tìm thấy, tìm kiếm gần đúng bằng Levenshtein distance
                     if (!$position) {
-                        $position = Position::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower(trim($positionName)) . '%'])->first();
+                        $positions = Position::all();
+                        $bestMatch = null;
+                        $bestDistance = PHP_INT_MAX;
+                        
+                        foreach ($positions as $pos) {
+                            $distance = levenshtein(strtolower(trim($positionName)), strtolower(trim($pos->name)));
+                            // Ngưỡng độ tương đồng (thấp hơn = tương đồng hơn)
+                            if ($distance < $bestDistance && $distance <= min(3, strlen($pos->name) / 3)) {
+                                $bestDistance = $distance;
+                                $bestMatch = $pos;
+                            }
+                        }
+                        
+                        $position = $bestMatch;
+                    }
+                    
+                    // Tạo chức danh mới nếu không tìm thấy và có tùy chọn
+                    if (!$position && $createNewEntities) {
+                        $position = Position::create([
+                            'name' => $positionName,
+                            'description' => 'Được tạo từ import'
+                        ]);
                     }
                     
                     $positionId = $position ? $position->id : null;
@@ -475,12 +596,32 @@ class QuestionController extends Controller
                 // Lấy ship_type_id từ tên - cải thiện tìm kiếm
                 $shipTypeId = null;
                 if (!empty($shipTypeName)) {
-                    // Tìm kiếm không phân biệt chữ hoa/thường và loại bỏ khoảng trắng đầu/cuối
+                    // Tìm kiếm chính xác trước
                     $shipType = ShipType::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($shipTypeName))])->first();
                     
-                    // Nếu không tìm thấy, thử tìm kiếm gần đúng
+                    // Nếu không tìm thấy, tìm kiếm gần đúng bằng Levenshtein
                     if (!$shipType) {
-                        $shipType = ShipType::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower(trim($shipTypeName)) . '%'])->first();
+                        $shipTypes = ShipType::all();
+                        $bestMatch = null;
+                        $bestDistance = PHP_INT_MAX;
+                        
+                        foreach ($shipTypes as $type) {
+                            $distance = levenshtein(strtolower(trim($shipTypeName)), strtolower(trim($type->name)));
+                            if ($distance < $bestDistance && $distance <= min(3, strlen($type->name) / 3)) {
+                                $bestDistance = $distance;
+                                $bestMatch = $type;
+                            }
+                        }
+                        
+                        $shipType = $bestMatch;
+                    }
+                    
+                    // Tạo loại tàu mới nếu không tìm thấy và có tùy chọn
+                    if (!$shipType && $createNewEntities) {
+                        $shipType = ShipType::create([
+                            'name' => $shipTypeName,
+                            'description' => 'Được tạo từ import'
+                        ]);
                     }
                     
                     $shipTypeId = $shipType ? $shipType->id : null;
@@ -560,6 +701,33 @@ class QuestionController extends Controller
                 $importLog[] = $rowLog;
             }
             
+            // Phân tích log để tạo cảnh báo
+            $warnings = [];
+
+            // Thêm cảnh báo về chức danh không tìm thấy
+            $missingPositions = collect($importLog)
+                ->where('position_found', false)
+                ->where('position_name_input', '!=', '')
+                ->pluck('position_name_input')
+                ->unique()
+                ->values();
+
+            if ($missingPositions->count() > 0) {
+                $warnings[] = "Không tìm thấy chức danh: " . $missingPositions->implode(', ');
+            }
+
+            // Thêm cảnh báo về loại tàu không tìm thấy
+            $missingShipTypes = collect($importLog)
+                ->where('ship_type_found', false)
+                ->where('ship_type_name_input', '!=', '')
+                ->pluck('ship_type_name_input')
+                ->unique()
+                ->values();
+
+            if ($missingShipTypes->count() > 0) {
+                $warnings[] = "Không tìm thấy loại tàu: " . $missingShipTypes->implode(', ');
+            }
+            
             // Lưu log import vào file để debug
             $logFile = storage_path('logs/questions_import_' . date('Y-m-d_H-i-s') . '.json');
             file_put_contents($logFile, json_encode([
@@ -568,7 +736,8 @@ class QuestionController extends Controller
                 'imported_count' => $importedCount,
                 'error_count' => $errorCount,
                 'details' => $importLog,
-                'errors' => $errors
+                'errors' => $errors,
+                'warnings' => $warnings
             ], JSON_PRETTY_PRINT));
             
             DB::commit();
@@ -579,6 +748,7 @@ class QuestionController extends Controller
                 'imported_count' => $importedCount,
                 'error_count' => $errorCount,
                 'errors' => $errors,
+                'warnings' => $warnings,
             ]);
             
         } catch (\Exception $e) {
