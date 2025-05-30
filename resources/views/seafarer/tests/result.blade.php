@@ -268,7 +268,7 @@
                                         @endif
                                     </div>
                                     <div class="text-muted small">
-                                        {{ $question->category }} | 
+                                        {{ $question->category ? $question->category->name : 'Chưa phân loại' }} | 
                                         @if($question->difficulty == 1)
                                             <span class="text-success">Dễ</span>
                                         @elseif($question->difficulty == 2)

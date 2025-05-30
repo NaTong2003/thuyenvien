@@ -118,7 +118,7 @@
                                 <div class="col-6">
                                     <small class="d-block text-muted mb-1">Danh mục</small>
                                     <span class="text-dark">
-                                        <i class="fas fa-tag me-1"></i> {{ $test->category ?? 'Chung' }}
+                                        <i class="fas fa-tag me-1"></i> {{ $test->category ? $test->category->name : 'Chung' }}
                                     </span>
                                 </div>
                                 <div class="col-6">

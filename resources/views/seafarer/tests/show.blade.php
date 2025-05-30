@@ -83,7 +83,7 @@
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between px-0">
                                     <span>Danh mục:</span>
-                                    <span><i class="fas fa-tag me-1"></i> {{ $test->category ?? 'Chung' }}</span>
+                                    <span><i class="fas fa-tag me-1"></i> {{ $test->category ? $test->category->name : 'Chung' }}</span>
                                 </li>
                             </ul>
                         </div>

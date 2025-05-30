@@ -226,7 +226,7 @@
                                                 @endif
                                             </div>
                                             <div>
-                                                <strong>Danh mục:</strong> {{ $attempt->test->category }}
+                                                <strong>Danh mục:</strong> {{ $attempt->test->category ? $attempt->test->category->name : 'Chưa phân loại' }}
                                             </div>
                                         </div>
                                         <div class="col-md-6">
