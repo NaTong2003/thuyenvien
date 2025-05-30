@@ -285,13 +285,8 @@ class QuestionController extends Controller
         }
         
         // Lọc theo danh mục
-        if ($request->has('category') && !empty($request->category) && $request->category != '-- Tất cả danh mục --') {
-            $query->where(function($q) use ($request) {
-                $q->where('category', 'like', '%' . $request->category . '%')
-                  ->orWhereHas('category', function($subquery) use ($request) {
-                      $subquery->where('name', 'like', '%' . $request->category . '%');
-                  });
-            });
+        if ($request->has('category_id') && !empty($request->category_id)) {
+            $query->where('category_id', $request->category_id);
         }
         
         $count = $query->count();

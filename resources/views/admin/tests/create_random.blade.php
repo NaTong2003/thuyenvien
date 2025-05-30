@@ -226,8 +226,8 @@
             
             // Gửi AJAX request để kiểm tra số lượng câu hỏi
             $.ajax({
-                url: '{{ route('admin.questions.count') }}',
-                type: 'GET',
+                url: "{{ route('admin.questions.count') }}",
+                type: "GET",
                 data: {
                     position_id: position_id,
                     ship_type_id: ship_type_id,
