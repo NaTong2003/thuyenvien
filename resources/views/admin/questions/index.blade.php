@@ -516,6 +516,7 @@
                             <div class="alert alert-danger">
                                 <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-1"></i> Lỗi import</h6>
                                 <p class="mb-0">${response.message}</p>
+                                ${response.error_details ? `<p class="mt-2 small"><strong>Chi tiết lỗi:</strong> ${response.error_details}</p>` : ''}
                             </div>
                         `;
                     }
@@ -525,7 +526,7 @@
                         resultHtml += `
                             <div class="alert alert-danger">
                                 <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-1"></i> Lỗi chi tiết</h6>
-                                <ul class="mb-0">
+                                <ul class="mb-0 small" style="max-height: 200px; overflow-y: auto;">
                                     ${response.errors.map(error => `<li>${error}</li>`).join('')}
                                 </ul>
                             </div>
@@ -549,8 +550,15 @@
                     $('#import-progress').addClass('d-none');
                     
                     let errorMessage = 'Đã xảy ra lỗi trong quá trình import.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
+                    let errorDetails = '';
+                    
+                    if (xhr.responseJSON) {
+                        if (xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        if (xhr.responseJSON.exception) {
+                            errorDetails = xhr.responseJSON.exception;
+                        }
                     }
                     
                     // Tạo thông báo lỗi
@@ -558,6 +566,7 @@
                         <div class="alert alert-danger">
                             <h6 class="alert-heading"><i class="fas fa-exclamation-circle me-1"></i> Lỗi import</h6>
                             <p class="mb-0">${errorMessage}</p>
+                            ${errorDetails ? `<p class="mt-2 small"><strong>Chi tiết lỗi:</strong> ${errorDetails}</p>` : ''}
                         </div>
                     `;
                     

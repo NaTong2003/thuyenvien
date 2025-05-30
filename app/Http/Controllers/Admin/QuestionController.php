@@ -513,12 +513,29 @@ class QuestionController extends Controller
         
         // Đọc file Excel
         $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
-        $spreadsheet = $reader->load($file->getPathname());
-        $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray();
+        $reader->setReadDataOnly(true); // Chỉ đọc dữ liệu, bỏ qua định dạng
         
-        // Bỏ qua hàng tiêu đề
-        array_shift($rows);
+        try {
+            $spreadsheet = $reader->load($file->getPathname());
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, true); // Chuyển thành mảng key-value
+            
+            // Bỏ qua hàng tiêu đề
+            array_shift($rows);
+            
+            // Log để debug
+            \Illuminate\Support\Facades\Log::info('Excel data loaded', [
+                'total_rows' => count($rows),
+                'first_row_sample' => isset($rows[1]) ? $rows[1] : null
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error reading Excel file: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể đọc file Excel',
+                'error_details' => $e->getMessage()
+            ], 400);
+        }
         
         // Chuẩn bị thống kê
         $importedCount = 0;
@@ -532,20 +549,58 @@ class QuestionController extends Controller
         try {
             foreach ($rows as $rowIndex => $row) {
                 // Bỏ qua hàng rỗng
-                if (empty($row[0])) continue;
+                if (empty($row['A'])) continue;
                 
-                $content = trim($row[0]);
-                $type = trim($row[1] ?? 'Trắc nghiệm');
-                $difficulty = trim($row[2] ?? 'Trung bình');
-                $positionName = trim($row[3] ?? '');
-                $shipTypeName = trim($row[4] ?? '');
-                $categoryName = trim($row[5] ?? '');
+                // Log dữ liệu thô để debug
+                $rawLog = [
+                    'row_index' => $rowIndex,
+                    'raw_data' => $row,
+                ];
+                \Illuminate\Support\Facades\Log::info('Raw Excel data:', $rawLog);
+                
+                $content = trim($row['A']);
+                $typeRaw = $row['B'] ?? 'Trắc nghiệm';
+                $typeString = trim(is_string($typeRaw) ? $typeRaw : 'Trắc nghiệm');
+                
+                // Log cụ thể giá trị type
+                \Illuminate\Support\Facades\Log::info('Type value:', [
+                    'row' => $rowIndex,
+                    'raw_type' => $typeRaw,
+                    'processed_type' => $typeString,
+                    'is_string' => is_string($typeRaw),
+                    'type_of_data' => gettype($typeRaw)
+                ]);
+                
+                // Kiểm tra và làm sạch giá trị type
+                // Lọc bỏ các ký tự JSON hoặc đặc biệt
+                if (is_string($typeString)) {
+                    // Kiểm tra nếu trông giống JSON
+                    if (strpos($typeString, '{') !== false || strpos($typeString, '[') !== false) {
+                        $typeString = 'Trắc nghiệm'; // Mặc định nếu dữ liệu không hợp lệ
+                    }
+                    
+                    // Chỉ chấp nhận một trong các giá trị hợp lệ
+                    $validTypes = ['Trắc nghiệm', 'Tự luận', 'Tình huống', 'Mô phỏng', 'Thực hành'];
+                    if (!in_array($typeString, $validTypes)) {
+                        $typeString = 'Trắc nghiệm'; // Mặc định nếu không thuộc các loại hợp lệ
+                    }
+                } else {
+                    $typeString = 'Trắc nghiệm'; // Mặc định nếu không phải chuỗi
+                }
+                
+                $difficulty = trim($row['C'] ?? 'Trung bình');
+                $positionName = trim($row['D'] ?? '');
+                $shipTypeName = trim($row['E'] ?? '');
+                $categoryName = trim($row['F'] ?? '');
                 
                 // Log dữ liệu đầu vào
                 $rowLog = [
                     'row' => $rowIndex + 2,
                     'position_name_input' => $positionName,
                     'ship_type_name_input' => $shipTypeName,
+                    'type' => $typeString,
+                    'difficulty' => $difficulty,
+                    'category_name' => $categoryName,
                 ];
                 
                 // Kiểm tra nếu câu hỏi đã tồn tại và chọn bỏ qua
@@ -558,6 +613,14 @@ class QuestionController extends Controller
                 
                 // Lấy position_id từ tên - cải thiện tìm kiếm
                 $positionId = null;
+                $positionName = trim($row['D'] ?? '');
+                
+                // Log dữ liệu position trước khi xử lý
+                \Illuminate\Support\Facades\Log::info('Position data:', [
+                    'row' => $rowIndex,
+                    'position_name' => $positionName,
+                ]);
+                
                 if (!empty($positionName)) {
                     // Tìm kiếm chính xác trước
                     $position = Position::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($positionName))])->first();
@@ -582,19 +645,38 @@ class QuestionController extends Controller
                     
                     // Tạo chức danh mới nếu không tìm thấy và có tùy chọn
                     if (!$position && $createNewEntities) {
-                        $position = Position::create([
-                            'name' => $positionName,
-                            'description' => 'Được tạo từ import'
-                        ]);
+                        try {
+                            $position = Position::create([
+                                'name' => $positionName,
+                                'description' => 'Được tạo từ import'
+                            ]);
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::warning('Failed to create position: ' . $e->getMessage());
+                            // Tiếp tục mà không dừng lại
+                        }
                     }
                     
-                    $positionId = $position ? $position->id : null;
-                    $rowLog['position_id'] = $positionId;
-                    $rowLog['position_found'] = $position ? true : false;
+                    // Đảm bảo positionId chỉ chứa ID số nguyên
+                    $positionId = $position ? intval($position->id) : null;
+                    
+                    // Log positionId sau khi xử lý
+                    \Illuminate\Support\Facades\Log::info('Position ID resolved:', [
+                        'position_id' => $positionId,
+                        'position_found' => $position ? true : false,
+                        'position_name' => $position ? $position->name : null
+                    ]);
                 }
                 
                 // Lấy ship_type_id từ tên - cải thiện tìm kiếm
                 $shipTypeId = null;
+                $shipTypeName = trim($row['E'] ?? '');
+                
+                // Log dữ liệu ship type trước khi xử lý
+                \Illuminate\Support\Facades\Log::info('Ship type data:', [
+                    'row' => $rowIndex,
+                    'ship_type_name' => $shipTypeName,
+                ]);
+                
                 if (!empty($shipTypeName)) {
                     // Tìm kiếm chính xác trước
                     $shipType = ShipType::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($shipTypeName))])->first();
@@ -618,87 +700,158 @@ class QuestionController extends Controller
                     
                     // Tạo loại tàu mới nếu không tìm thấy và có tùy chọn
                     if (!$shipType && $createNewEntities) {
-                        $shipType = ShipType::create([
-                            'name' => $shipTypeName,
-                            'description' => 'Được tạo từ import'
-                        ]);
+                        try {
+                            $shipType = ShipType::create([
+                                'name' => $shipTypeName,
+                                'description' => 'Được tạo từ import'
+                            ]);
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::warning('Failed to create ship type: ' . $e->getMessage());
+                            // Tiếp tục mà không dừng lại
+                        }
                     }
                     
-                    $shipTypeId = $shipType ? $shipType->id : null;
-                    $rowLog['ship_type_id'] = $shipTypeId;
-                    $rowLog['ship_type_found'] = $shipType ? true : false;
+                    // Đảm bảo shipTypeId chỉ chứa ID số nguyên
+                    $shipTypeId = $shipType ? intval($shipType->id) : null;
+                    
+                    // Log shipTypeId sau khi xử lý
+                    \Illuminate\Support\Facades\Log::info('Ship type ID resolved:', [
+                        'ship_type_id' => $shipTypeId,
+                        'ship_type_found' => $shipType ? true : false,
+                        'ship_type_name' => $shipType ? $shipType->name : null
+                    ]);
                 }
                 
                 // Lấy category_id từ tên
                 $categoryId = null;
+                $categoryName = trim($row['F'] ?? '');
+                
+                // Log dữ liệu category trước khi xử lý
+                \Illuminate\Support\Facades\Log::info('Category data:', [
+                    'row' => $rowIndex,
+                    'category_name' => $categoryName,
+                ]);
+                
                 if (!empty($categoryName)) {
                     // Cải thiện tìm kiếm danh mục
                     $category = Category::whereRaw('LOWER(TRIM(name)) = ?', [strtolower(trim($categoryName))])->first();
                     
                     if ($category) {
-                        $categoryId = $category->id;
+                        $categoryId = intval($category->id);
                     } else {
                         // Tạo category mới nếu không tồn tại
-                        $category = Category::create([
-                            'name' => $categoryName,
-                            'description' => 'Được tạo từ import'
-                        ]);
-                        $categoryId = $category->id;
+                        try {
+                            $category = new Category();
+                            $category->name = $categoryName;
+                            $category->description = 'Được tạo từ import';
+                            $category->save();
+                            $categoryId = intval($category->id);
+                        } catch (\Exception $e) {
+                            $errorCount++;
+                            $errors[] = "Dòng " . ($rowIndex + 2) . ": Không thể tạo danh mục mới: " . $e->getMessage();
+                            \Illuminate\Support\Facades\Log::error('Error creating category at row ' . ($rowIndex + 2) . ': ' . $e->getMessage());
+                            continue;
+                        }
                     }
                     
-                    $rowLog['category_id'] = $categoryId;
+                    // Log categoryId sau khi xử lý
+                    \Illuminate\Support\Facades\Log::info('Category ID resolved:', [
+                        'category_id' => $categoryId,
+                        'category_name' => $category ? $category->name : null
+                    ]);
                 }
                 
                 // Kiểm tra các trường bắt buộc
-                if (empty($content) || empty($type) || empty($difficulty) || empty($categoryId)) {
+                if (empty($content) || empty($typeString) || empty($difficulty) || empty($categoryId)) {
                     $errorCount++;
                     $errors[] = "Dòng " . ($rowIndex + 2) . ": Thiếu thông tin bắt buộc.";
                     continue;
                 }
                 
                 // Tạo câu hỏi mới
-                $question = Question::create([
-                    'content' => $content,
-                    'type' => $type,
-                    'position_id' => $positionId,
-                    'ship_type_id' => $shipTypeId,
-                    'category_id' => $categoryId,
-                    'category' => $categoryName,
-                    'difficulty' => $difficulty,
-                    'created_by' => auth()->id(),
-                ]);
-                
-                $rowLog['question_id'] = $question->id;
-                
-                // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm
-                if ($type == 'Trắc nghiệm') {
-                    $option1 = trim($row[6] ?? '');
-                    $option2 = trim($row[7] ?? '');
-                    $option3 = trim($row[8] ?? '');
-                    $option4 = trim($row[9] ?? '');
-                    $correctAnswer = (int)trim($row[10] ?? 0);
+                try {
+                    // Log dữ liệu trước khi tạo câu hỏi để kiểm tra
+                    \Illuminate\Support\Facades\Log::info('Creating question with data:', [
+                        'content' => $content,
+                        'type' => $typeString,
+                        'position_id' => $positionId,
+                        'ship_type_id' => $shipTypeId,
+                        'category_id' => $categoryId,
+                        'category' => $categoryName,
+                        'difficulty' => $difficulty,
+                        'type_class' => is_object($typeString) ? get_class($typeString) : gettype($typeString),
+                        'position_id_class' => is_object($positionId) ? get_class($positionId) : gettype($positionId),
+                        'ship_type_id_class' => is_object($shipTypeId) ? get_class($shipTypeId) : gettype($shipTypeId),
+                    ]);
                     
-                    if (empty($option1) || empty($option2)) {
-                        $errorCount++;
-                        $errors[] = "Dòng " . ($rowIndex + 2) . ": Câu hỏi trắc nghiệm phải có ít nhất 2 phương án.";
-                        continue;
-                    }
+                    // Đảm bảo tất cả biến đều có kiểu dữ liệu đúng
+                    $type_final = is_string($typeString) ? $typeString : 'Trắc nghiệm';
+                    $position_id_final = is_numeric($positionId) ? $positionId : null;
+                    $ship_type_id_final = is_numeric($shipTypeId) ? $shipTypeId : null;
+                    $category_id_final = is_numeric($categoryId) ? $categoryId : null;
                     
-                    // Thêm các phương án
-                    $options = [$option1, $option2, $option3, $option4];
-                    foreach ($options as $index => $option) {
-                        if (!empty($option)) {
-                            Answer::create([
-                                'question_id' => $question->id,
-                                'content' => $option,
-                                'is_correct' => ($index + 1) == $correctAnswer,
-                            ]);
+                    // Tạo câu hỏi với dữ liệu đã kiểm tra
+                    $question = new Question();
+                    $question->content = $content;
+                    $question->type = $type_final;
+                    $question->position_id = $position_id_final;
+                    $question->ship_type_id = $ship_type_id_final;
+                    $question->category_id = $category_id_final;
+                    $question->category = $categoryName;
+                    $question->difficulty = $difficulty;
+                    $question->created_by = auth()->id();
+                    $question->save();
+                    
+                    $rowLog['question_id'] = $question->id;
+                    
+                    // Thêm các câu trả lời nếu là câu hỏi trắc nghiệm
+                    if ($typeString == 'Trắc nghiệm') {
+                        $option1 = trim($row['G'] ?? '');
+                        $option2 = trim($row['H'] ?? '');
+                        $option3 = trim($row['I'] ?? '');
+                        $option4 = trim($row['J'] ?? '');
+                        $correctAnswer = (int)trim($row['K'] ?? 0);
+                        
+                        if (empty($option1) || empty($option2)) {
+                            $errorCount++;
+                            $errors[] = "Dòng " . ($rowIndex + 2) . ": Câu hỏi trắc nghiệm phải có ít nhất 2 phương án.";
+                            // Xóa câu hỏi đã tạo
+                            $question->delete();
+                            continue;
+                        }
+                        
+                        // Log các câu trả lời trước khi tạo
+                        \Illuminate\Support\Facades\Log::info('Creating answers for question ' . $question->id, [
+                            'options' => [$option1, $option2, $option3, $option4],
+                            'correct_answer' => $correctAnswer
+                        ]);
+                        
+                        // Thêm các phương án
+                        $options = [$option1, $option2, $option3, $option4];
+                        foreach ($options as $index => $option) {
+                            if (!empty($option)) {
+                                try {
+                                    $answer = new Answer();
+                                    $answer->question_id = $question->id;
+                                    $answer->content = $option;
+                                    $answer->is_correct = ($index + 1) == $correctAnswer;
+                                    $answer->save();
+                                } catch (\Exception $e) {
+                                    \Illuminate\Support\Facades\Log::warning('Failed to create answer: ' . $e->getMessage());
+                                    // Tiếp tục với câu trả lời tiếp theo
+                                }
+                            }
                         }
                     }
+                    
+                    $importedCount++;
+                    $importLog[] = $rowLog;
+                } catch (\Exception $e) {
+                    $errorCount++;
+                    $errors[] = "Dòng " . ($rowIndex + 2) . ": Lỗi khi lưu: " . $e->getMessage();
+                    \Illuminate\Support\Facades\Log::error('Import error row ' . ($rowIndex + 2) . ': ' . $e->getMessage());
+                    continue;
                 }
-                
-                $importedCount++;
-                $importLog[] = $rowLog;
             }
             
             // Phân tích log để tạo cảnh báo
@@ -754,6 +907,22 @@ class QuestionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             
+            // Phân tích chi tiết lỗi để hiển thị thông báo hữu ích
+            $errorMessage = "Có lỗi xảy ra khi import dữ liệu";
+            $errorDetails = $e->getMessage();
+            
+            // Phát hiện lỗi liên quan đến trường 'type'
+            if (strpos($errorDetails, "Data truncated for column 'type'") !== false) {
+                $errorMessage = "Lỗi: Dữ liệu không hợp lệ trong cột 'Loại câu hỏi'";
+                $errorDetails = "Định dạng dữ liệu trong cột 'Loại câu hỏi' không hợp lệ. Vui lòng chỉ sử dụng một trong các giá trị: Trắc nghiệm, Tự luận, Tình huống, Mô phỏng, Thực hành.";
+            }
+            
+            // Phát hiện lỗi liên quan đến dữ liệu JSON
+            if (strpos($errorDetails, "json") !== false || strpos($errorDetails, "JSON") !== false) {
+                $errorMessage = "Lỗi: Dữ liệu JSON không hợp lệ";
+                $errorDetails = "File Excel có thể chứa dữ liệu định dạng không hợp lệ. Vui lòng kiểm tra lại định dạng và nội dung file.";
+            }
+            
             // Log lỗi
             \Illuminate\Support\Facades\Log::error('Error importing questions: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
@@ -763,7 +932,8 @@ class QuestionController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => "Có lỗi xảy ra: " . $e->getMessage(),
+                'message' => $errorMessage,
+                'error_details' => $errorDetails,
                 'imported_count' => 0,
                 'error_count' => 0,
             ], 500);

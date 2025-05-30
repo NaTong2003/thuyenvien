@@ -306,12 +306,12 @@ class TestController extends Controller
             // Nếu không phải bài kiểm tra ngẫu nhiên, thêm các câu hỏi cố định
             if (!$request->has('is_random')) {
                 if ($request->has('question_ids') && is_array($request->question_ids)) {
-                    foreach ($request->question_ids as $index => $question_id) {
-                        TestQuestion::create([
-                            'test_id' => $test->id,
-                            'question_id' => $question_id,
-                            'order' => $index + 1,
-                        ]);
+                foreach ($request->question_ids as $index => $question_id) {
+                    TestQuestion::create([
+                        'test_id' => $test->id,
+                        'question_id' => $question_id,
+                        'order' => $index + 1,
+                    ]);
                     }
                 } else {
                     // Log lỗi nếu không có câu hỏi được chọn
@@ -347,7 +347,7 @@ class TestController extends Controller
             $completedAttempts = $test->testAttempts()->where('is_completed', true)->count();
             
             if ($completedAttempts > 0) {
-                return redirect()->route('admin.tests.index')
+            return redirect()->route('admin.tests.index')
                                 ->with('error', 'Không thể xóa bài kiểm tra này vì đã có thuyền viên hoàn thành bài!');
             }
             
