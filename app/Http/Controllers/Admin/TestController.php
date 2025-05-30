@@ -67,37 +67,32 @@ class TestController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            // Ghi log request data để debug
-            Log::info('Test store request data: ' . json_encode($request->all()));
-            
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'description' => 'required|string',
-                'duration' => 'required|integer|min:5|max:180',
-                'passing_score' => 'required|integer|min:0|max:100',
-                'position_id' => 'nullable|exists:positions,id',
-                'ship_type_id' => 'nullable|exists:ship_types,id',
-                'question_ids' => $request->has('is_random') ? 'nullable|array' : 'required|array|min:1',
-                'question_ids.*' => 'exists:questions,id',
-                'category' => 'required|string|max:50',
-                'is_active' => 'nullable|boolean',
-                'is_random' => 'nullable|boolean',
-                'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
-                'difficulty' => 'required|string',
-                'type' => 'required|string',
-                // Thêm validation cho các cài đặt bài kiểm tra
-                'shuffle_questions' => 'nullable|boolean',
-                'shuffle_answers' => 'nullable|boolean',
-                'allow_back' => 'nullable|boolean',
-                'show_result_immediately' => 'nullable|boolean',
-                'max_attempts' => 'nullable|integer|min:0',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Ghi log lỗi validation
-            Log::error('Test validation errors: ' . json_encode($e->errors()));
-            return redirect()->back()->withErrors($e->validator)->withInput();
-        }
+        // Ghi log request data để debug
+        Log::info('Test store request data: ' . json_encode($request->all()));
+        
+        // Xác thực dữ liệu - không sử dụng try-catch để Laravel tự động redirect với lỗi
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'duration' => 'required|integer|min:5|max:180',
+            'passing_score' => 'required|integer|min:0|max:100',
+            'position_id' => 'nullable|exists:positions,id',
+            'ship_type_id' => 'nullable|exists:ship_types,id',
+            'question_ids' => $request->has('is_random') ? 'nullable|array' : 'required|array|min:1',
+            'question_ids.*' => 'exists:questions,id',
+            'category' => 'required|string|max:50',
+            'is_active' => 'nullable|boolean',
+            'is_random' => 'nullable|boolean',
+            'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
+            'difficulty' => 'required|string',
+            'type' => 'required|string',
+            // Thêm validation cho các cài đặt bài kiểm tra
+            'shuffle_questions' => 'nullable|boolean',
+            'shuffle_answers' => 'nullable|boolean',
+            'allow_back' => 'nullable|boolean',
+            'show_result_immediately' => 'nullable|boolean',
+            'max_attempts' => 'nullable|integer|min:0',
+        ]);
         
         DB::beginTransaction();
         
@@ -129,6 +124,11 @@ class TestController extends Controller
             
             // Nếu không phải bài kiểm tra ngẫu nhiên, thêm các câu hỏi cố định
             if (!$request->has('is_random')) {
+                if (empty($request->question_ids)) {
+                    DB::rollBack();
+                    return redirect()->back()->withErrors(['question_ids' => 'Vui lòng chọn ít nhất 1 câu hỏi cho bài kiểm tra'])->withInput();
+                }
+                
                 foreach ($request->question_ids as $index => $question_id) {
                     TestQuestion::create([
                         'test_id' => $test->id,
@@ -149,6 +149,7 @@ class TestController extends Controller
                             ->with('success', 'Thêm bài kiểm tra thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error creating test: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Đã xảy ra lỗi khi thêm bài kiểm tra: ' . $e->getMessage())->withInput();
         }
     }
@@ -397,23 +398,23 @@ class TestController extends Controller
      */
     public function storeRandom(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'description' => 'required|string',
-                'duration' => 'required|integer|min:5|max:180',
-                'passing_score' => 'required|integer|min:0|max:100',
-                'position_id' => 'nullable|exists:positions,id',
-                'ship_type_id' => 'nullable|exists:ship_types,id',
-                'random_questions_count' => 'required|integer|min:1|max:50',
-                'category' => 'required|string|max:50',
-                'difficulty' => 'required|string',
-                'type' => 'required|string',
-                'is_active' => 'nullable|boolean',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()->withErrors($e->validator)->withInput();
-        }
+        // Ghi log request data để debug
+        Log::info('Random test store request data: ' . json_encode($request->all()));
+        
+        // Xác thực dữ liệu - không sử dụng try-catch để Laravel tự động redirect với lỗi
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'duration' => 'required|integer|min:5|max:180',
+            'passing_score' => 'required|integer|min:0|max:100',
+            'position_id' => 'nullable|exists:positions,id',
+            'ship_type_id' => 'nullable|exists:ship_types,id',
+            'random_questions_count' => 'required|integer|min:1|max:50',
+            'category' => 'required|string|max:50',
+            'difficulty' => 'required|string',
+            'type' => 'required|string',
+            'is_active' => 'nullable|boolean',
+        ]);
         
         DB::beginTransaction();
         
@@ -461,7 +462,6 @@ class TestController extends Controller
             
             // Lọc theo danh mục
             if ($request->category && $request->category != '-- Tất cả danh mục --') {
-                // Tìm kiếm câu hỏi có category (chuỗi) hoặc category_id phù hợp
                 $query->where(function($q) use ($request) {
                     $q->where('category', 'like', '%' . $request->category . '%')
                       ->orWhereHas('category', function($subquery) use ($request) {
@@ -470,52 +470,34 @@ class TestController extends Controller
                 });
             }
             
-            // Log để debug
-            logger('Query parameters: ' . json_encode([
-                'position_id' => $request->position_id,
-                'ship_type_id' => $request->ship_type_id,
-                'difficulty' => $request->difficulty,
-                'category' => $request->category,
-                'random_questions_count' => $request->random_questions_count
-            ]));
+            // Đếm số lượng câu hỏi thỏa mãn điều kiện
+            $availableQuestionsCount = $query->count();
             
-            // Lấy tổng số câu hỏi phù hợp với điều kiện
-            $totalAvailableQuestions = $query->count();
-            logger('Total available questions: ' . $totalAvailableQuestions);
-            
-            // Lấy ngẫu nhiên số lượng câu hỏi theo yêu cầu
-            $randomQuestionsCount = min($request->random_questions_count, $totalAvailableQuestions);
-            $randomQuestions = $query->inRandomOrder()->limit($randomQuestionsCount)->get();
-            
-            // Kiểm tra số lượng câu hỏi tìm được
-            if ($randomQuestions->count() == 0) {
+            // Kiểm tra nếu không có đủ câu hỏi
+            if ($availableQuestionsCount < $request->random_questions_count) {
                 DB::rollBack();
-                logger('Không tìm thấy câu hỏi nào phù hợp');
                 return redirect()->back()
-                    ->with('error', 'Không tìm thấy câu hỏi phù hợp với tiêu chí đã chọn. Vui lòng thử lại với tiêu chí khác.')
+                    ->with('error', "Không đủ câu hỏi thỏa mãn điều kiện. Chỉ có {$availableQuestionsCount} câu hỏi khả dụng.")
                     ->withInput();
             }
             
-            logger('Found ' . $randomQuestions->count() . ' questions');
-            
-            // Tạo các bản ghi TestQuestion cho bài kiểm tra
-            foreach ($randomQuestions as $index => $question) {
-                TestQuestion::create([
-                    'test_id' => $test->id,
-                    'question_id' => $question->id,
-                    'order' => $index + 1,
-                    'points' => 1.0, // Điểm mặc định cho mỗi câu hỏi
-                ]);
-            }
+            // Lưu các cài đặt bài kiểm tra
+            $test->settings()->create([
+                'shuffle_questions' => true, // Mặc định bật xáo trộn câu hỏi cho bài kiểm tra ngẫu nhiên
+                'shuffle_answers' => $request->has('shuffle_answers'),
+                'allow_back' => $request->has('allow_back'),
+                'show_result_immediately' => $request->has('show_result_immediately'),
+                'max_attempts' => $request->max_attempts ?? null,
+            ]);
             
             DB::commit();
             
-            return redirect()->route('admin.tests.show', $test->id)
-                            ->with('success', 'Thêm bài kiểm tra ngẫu nhiên thành công với ' . $randomQuestions->count() . ' câu hỏi!');
+            return redirect()->route('admin.tests.index')
+                            ->with('success', 'Thêm bài kiểm tra ngẫu nhiên thành công!');
         } catch (\Exception $e) {
             DB::rollBack();
-            logger('Error creating random test: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Đã xảy ra lỗi khi thêm bài kiểm tra: ' . $e->getMessage())->withInput();
+            Log::error('Error creating random test: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Đã xảy ra lỗi khi thêm bài kiểm tra ngẫu nhiên: ' . $e->getMessage())->withInput();
         }
     }
 
