@@ -35,16 +35,16 @@
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="category" class="form-label">Danh mục <span class="text-danger">*</span></label>
-                                <select class="form-select @error('category') is-invalid @enderror" id="category" name="category" required>
-                                    <option value="">-- Tất cả danh mục --</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->name }}" {{ old('category') == $category->name ? 'selected' : '' }}>
+                                <label for="category_id" class="form-label">Danh mục <span class="text-danger">*</span></label>
+                                <select class="form-select @error('category_id') is-invalid @enderror" id="category_id" name="category_id" required>
+                                    <option value="">-- Chọn danh mục --</option>
+                                    @foreach(App\Models\Category::all() as $category)
+                                        <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
                                             {{ $category->name }}
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('category')
+                                @error('category_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -219,7 +219,7 @@
             const position_id = $('#position_id').val();
             const ship_type_id = $('#ship_type_id').val();
             const difficulty = $('#difficulty').val();
-            const category = $('#category').val();
+            const category_id = $('#category_id').val();
             
             // Hiển thị loader
             $(this).html('<i class="fas fa-spinner fa-spin me-1"></i> Đang kiểm tra...');
@@ -232,7 +232,7 @@
                     position_id: position_id,
                     ship_type_id: ship_type_id,
                     difficulty: difficulty,
-                    category: category
+                    category_id: category_id
                 },
                 success: function(response) {
                     $('#available-count').text(response.count);

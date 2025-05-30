@@ -71,21 +71,21 @@ class TestController extends Controller
         Log::info('Test store request data: ' . json_encode($request->all()));
         
         // Xác thực dữ liệu - không sử dụng try-catch để Laravel tự động redirect với lỗi
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'duration' => 'required|integer|min:5|max:180',
-            'passing_score' => 'required|integer|min:0|max:100',
-            'position_id' => 'nullable|exists:positions,id',
-            'ship_type_id' => 'nullable|exists:ship_types,id',
-            'question_ids' => $request->has('is_random') ? 'nullable|array' : 'required|array|min:1',
-            'question_ids.*' => 'exists:questions,id',
-            'category' => 'required|string|max:50',
-            'is_active' => 'nullable|boolean',
-            'is_random' => 'nullable|boolean',
-            'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
-            'difficulty' => 'required|string',
-            'type' => 'required|string',
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'duration' => 'required|integer|min:5|max:180',
+                'passing_score' => 'required|integer|min:0|max:100',
+                'position_id' => 'nullable|exists:positions,id',
+                'ship_type_id' => 'nullable|exists:ship_types,id',
+                'question_ids' => $request->has('is_random') ? 'nullable|array' : 'required|array|min:1',
+                'question_ids.*' => 'exists:questions,id',
+                'category_id' => 'required|exists:categories,id',
+                'is_active' => 'nullable|boolean',
+                'is_random' => 'nullable|boolean',
+                'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
+                'difficulty' => 'required|string',
+                'type' => 'required|string',
             // Thêm validation cho các cài đặt bài kiểm tra
             'shuffle_questions' => 'nullable|boolean',
             'shuffle_answers' => 'nullable|boolean',
@@ -105,7 +105,7 @@ class TestController extends Controller
                 'passing_score' => $request->passing_score,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
-                'category' => $request->category,
+                'category_id' => $request->category_id,
                 'is_active' => $request->has('is_active') ? true : false,
                 'is_random' => $request->has('is_random') ? true : false,
                 'difficulty' => $request->difficulty,
@@ -252,7 +252,7 @@ class TestController extends Controller
                 'ship_type_id' => 'nullable|exists:ship_types,id',
                 'question_ids' => $request->has('is_random') ? 'nullable|array' : 'required|array|min:1',
                 'question_ids.*' => 'exists:questions,id',
-                'category' => 'required|string|max:50',
+                'category_id' => 'required|exists:categories,id',
                 'is_active' => 'nullable|boolean',
                 'is_random' => 'nullable|boolean',
                 'random_questions_count' => 'required_if:is_random,1|nullable|integer|min:1',
@@ -282,7 +282,7 @@ class TestController extends Controller
                 'passing_score' => $request->passing_score,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
-                'category' => $request->category,
+                'category_id' => $request->category_id,
                 'is_active' => $request->has('is_active') ? true : false,
                 'is_random' => $request->has('is_random') ? true : false,
                 'difficulty' => $request->difficulty,
@@ -402,19 +402,19 @@ class TestController extends Controller
         Log::info('Random test store request data: ' . json_encode($request->all()));
         
         // Xác thực dữ liệu - không sử dụng try-catch để Laravel tự động redirect với lỗi
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'duration' => 'required|integer|min:5|max:180',
-            'passing_score' => 'required|integer|min:0|max:100',
-            'position_id' => 'nullable|exists:positions,id',
-            'ship_type_id' => 'nullable|exists:ship_types,id',
-            'random_questions_count' => 'required|integer|min:1|max:50',
-            'category' => 'required|string|max:50',
-            'difficulty' => 'required|string',
-            'type' => 'required|string',
-            'is_active' => 'nullable|boolean',
-        ]);
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'duration' => 'required|integer|min:5|max:180',
+                'passing_score' => 'required|integer|min:0|max:100',
+                'position_id' => 'nullable|exists:positions,id',
+                'ship_type_id' => 'nullable|exists:ship_types,id',
+                'random_questions_count' => 'required|integer|min:1|max:50',
+                'category_id' => 'required|exists:categories,id',
+                'difficulty' => 'required|string',
+                'type' => 'required|string',
+                'is_active' => 'nullable|boolean',
+            ]);
         
         DB::beginTransaction();
         
@@ -427,7 +427,7 @@ class TestController extends Controller
                 'passing_score' => $request->passing_score,
                 'position_id' => $request->position_id,
                 'ship_type_id' => $request->ship_type_id,
-                'category' => $request->category,
+                'category_id' => $request->category_id,
                 'difficulty' => $request->difficulty,
                 'type' => $request->type,
                 'is_active' => $request->has('is_active') ? true : false,
@@ -461,12 +461,9 @@ class TestController extends Controller
             }
             
             // Lọc theo danh mục
-            if ($request->category && $request->category != '-- Tất cả danh mục --') {
+            if ($request->category_id && $request->category_id != '-- Tất cả danh mục --') {
                 $query->where(function($q) use ($request) {
-                    $q->where('category', 'like', '%' . $request->category . '%')
-                      ->orWhereHas('category', function($subquery) use ($request) {
-                          $subquery->where('name', 'like', '%' . $request->category . '%');
-                      });
+                    $q->where('category_id', $request->category_id);
                 });
             }
             
@@ -488,7 +485,7 @@ class TestController extends Controller
                 'allow_back' => $request->has('allow_back'),
                 'show_result_immediately' => $request->has('show_result_immediately'),
                 'max_attempts' => $request->max_attempts ?? null,
-            ]);
+                ]);
             
             DB::commit();
             

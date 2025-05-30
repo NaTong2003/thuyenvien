@@ -632,56 +632,59 @@ class ReportController extends Controller
      */
     public function export()
     {
-        // Tạo header cho file CSV
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="danh_sach_thuyen_vien_hieu_suat_cao.csv"',
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
-        ];
-
-        // Lấy danh sách thuyền viên có hiệu suất cao
-        $users = User::whereHas('role', function($q) {
-                $q->where('name', 'Thuyền viên');
-            })
-            ->withCount('testAttempts')
-            ->withAvg('testAttempts as average_score', 'score')
-            ->having('test_attempts_count', '>', 0)
-            ->orderBy('average_score', 'desc')
-            ->take(100)
-            ->get();
-
-        // Tạo nội dung file CSV
-        $callback = function() use ($users) {
-            $file = fopen('php://output', 'w');
-            
-            // Thêm BOM (Byte Order Mark) để đảm bảo Excel hiển thị tiếng Việt đúng
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
-            
-            // Thêm header
-            fputcsv($file, ['STT', 'Họ và tên', 'Email', 'Chức danh', 'Loại tàu', 'Số lượt thi', 'Điểm trung bình']);
-            
-            // Thêm dữ liệu
-            $index = 1;
-            foreach ($users as $user) {
-                $position = $user->thuyenVien && $user->thuyenVien->position ? $user->thuyenVien->position->name : 'Không có';
-                $shipType = $user->thuyenVien && $user->thuyenVien->shipType ? $user->thuyenVien->shipType->name : 'Không có';
-                
-                fputcsv($file, [
-                    $index++,
-                    $user->name,
-                    $user->email,
-                    $position,
-                    $shipType,
-                    $user->test_attempts_count,
-                    number_format($user->average_score, 2)
-                ]);
-            }
-            
-            fclose($file);
-        };
+        // Tính năng xuất dữ liệu báo cáo
+        return redirect()->back()->with('info', 'Chức năng xuất dữ liệu đang được phát triển.');
+    }
+    
+    /**
+     * Tìm kiếm thuyền viên và kết quả bài kiểm tra
+     */
+    public function search(Request $request)
+    {
+        $search = $request->input('search');
         
-        return response()->stream($callback, 200, $headers);
+        if (empty($search)) {
+            return redirect()->route('admin.reports.index')
+                            ->with('error', 'Vui lòng nhập từ khóa tìm kiếm.');
+        }
+        
+        // Tìm thuyền viên theo tên hoặc thông tin liên hệ
+        $seafarerId = Role::where('name', 'Thuyền viên')->first()->id;
+        
+        $users = User::where('role_id', $seafarerId)
+                    ->where(function($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%')
+                              ->orWhere('email', 'like', '%' . $search . '%')
+                              ->orWhere('phone', 'like', '%' . $search . '%');
+                    })
+                    ->with(['thuyenVien.position', 'testAttempts.test'])
+                    ->get();
+        
+        // Lấy các lượt thi của các thuyền viên tìm được
+        $testAttempts = TestAttempt::whereIn('user_id', $users->pluck('id'))
+                                  ->with(['user', 'test'])
+                                  ->orderBy('created_at', 'desc')
+                                  ->get();
+        
+        // Tính toán thống kê
+        $stats = [
+            'userCount' => $users->count(),
+            'attemptCount' => $testAttempts->count(),
+            'averageScore' => $testAttempts->avg('score') ?? 0,
+        ];
+        
+        // Tính số lượt đạt/không đạt
+        $passCount = 0;
+        foreach ($testAttempts as $attempt) {
+            if ($attempt->isPassed()) {
+                $passCount++;
+            }
+        }
+        
+        $stats['passCount'] = $passCount;
+        $stats['failCount'] = $testAttempts->count() - $passCount;
+        $stats['passRate'] = $testAttempts->count() > 0 ? round(($passCount / $testAttempts->count()) * 100, 1) : 0;
+        
+        return view('admin.reports.search_results', compact('users', 'testAttempts', 'stats', 'search'));
     }
 }

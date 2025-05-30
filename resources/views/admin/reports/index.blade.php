@@ -196,6 +196,39 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="col-md-4">
+                <div class="card report-card shadow">
+                    <div class="card-body text-center">
+                        <div class="report-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h5 class="card-title">Tìm kiếm kết quả</h5>
+                        <p class="card-text">Tìm kiếm nhanh kết quả bài kiểm tra của thuyền viên.</p>
+                        <form action="{{ route('admin.reports.search') }}" method="GET" class="mt-3">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" placeholder="Tên thuyền viên..." name="search" required>
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card report-card shadow">
+                    <div class="card-body text-center">
+                        <div class="report-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <h5 class="card-title">Quản lý danh mục</h5>
+                        <p class="card-text">Quản lý các danh mục bài kiểm tra và câu hỏi.</p>
+                        <a href="{{ route('admin.categories.index') }}" class="btn btn-primary">Xem danh mục</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     

@@ -33,6 +33,12 @@
         </a>
     </li>
     <li class="nav-item">
+        <a href="{{ route('admin.categories.index') }}" class="nav-link {{ request()->routeIs('admin.categories*') ? 'active' : '' }}">
+            <i class="fas fa-tags"></i>
+            Quản lý Danh mục
+        </a>
+    </li>
+    <li class="nav-item">
         <a href="{{ route('admin.reports.marking') }}" class="nav-link {{ request()->routeIs('admin.reports.marking') || request()->routeIs('admin.reports.mark.attempt') ? 'active' : '' }}">
             <i class="fas fa-pen"></i>
             Chấm điểm bài thi

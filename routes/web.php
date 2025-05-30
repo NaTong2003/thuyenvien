@@ -12,6 +12,7 @@ use App\Http\Controllers\Seafarer\TestController as SeafarerTestController;
 use App\Http\Controllers\Seafarer\ProfileController;
 use App\Http\Controllers\Admin\CertificateController;
 use App\Http\Controllers\Seafarer\CertificateController as SeafarerCertificateController;
+use App\Http\Controllers\Admin\CategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -68,6 +69,10 @@ Route::prefix('admin')->middleware(['auth', 'isAdmin'])->name('admin.')->group(f
     Route::get('/reports/seafarer/{user}', [ReportController::class, 'seafarerReport'])->name('reports.seafarer');
     Route::get('/reports/attempt/{testAttempt}', [ReportController::class, 'attemptReport'])->name('reports.attempt');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::get('/reports/search', [ReportController::class, 'search'])->name('reports.search');
+    
+    // Quản lý danh mục
+    Route::resource('categories', CategoryController::class);
     
     // Chấm điểm bài thi
     Route::get('/marking', [ReportController::class, 'markingPage'])->name('reports.marking');

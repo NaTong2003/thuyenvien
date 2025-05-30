@@ -33,10 +33,17 @@
                         @enderror
                     </div>
                     
-                    <div class="col-md-6">
-                        <label for="category" class="form-label">Danh mục <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control @error('category') is-invalid @enderror" id="category" name="category" value="{{ old('category', $test->category) }}" required>
-                        @error('category')
+                    <div class="col-md-4">
+                        <label for="category_id" class="form-label">Danh mục <span class="text-danger">*</span></label>
+                        <select class="form-select @error('category_id') is-invalid @enderror" id="category_id" name="category_id" required>
+                            <option value="">-- Chọn danh mục --</option>
+                            @foreach(App\Models\Category::all() as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id', $test->category_id) == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('category_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
