@@ -244,8 +244,8 @@ class ReportController extends Controller
         // Lấy tất cả lượt thi của thuyền viên
         $testAttempts = $user->testAttempts()
                             ->with(['test', 'userResponses.question', 'userResponses.answer'])
-                            ->orderBy('created_at', 'desc')
-                            ->get();
+                        ->orderBy('created_at', 'desc')
+                        ->get();
         
         // Tính toán các số liệu thống kê
         $totalAttempts = $testAttempts->count();

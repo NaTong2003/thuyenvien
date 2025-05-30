@@ -216,7 +216,13 @@
                                             {{ $question->difficulty ?? 'Không xác định' }}
                                         </span>
                                         <span class="question-category">
-                                            {{ $question->category->name ?? 'Không phân loại' }}
+                                            @if(is_object($question->category))
+                                                {{ $question->category->name ?? 'Không phân loại' }}
+                                            @elseif(is_string($question->category))
+                                                {{ $question->category }}
+                                            @else
+                                                {{ $question->category_id ? App\Models\Category::find($question->category_id)->name : 'Không phân loại' }}
+                                            @endif
                                         </span>
                                     </div>
                                     <div class="text-muted small">

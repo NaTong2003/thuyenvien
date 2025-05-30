@@ -176,9 +176,10 @@
 @section('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Dummy data for radar chart (thay bằng dữ liệu thực từ controller)
-    const skillLabels = ['Hàng hải', 'An toàn', 'Bảo trì', 'Tiếng Anh', 'Kỹ thuật', 'Quản lý'];
-    const skillData = [80, 70, 90, 65, 75, 85];
+    // Sử dụng dữ liệu thật từ controller
+    const skillScores = @json($skillScores);
+    const skillLabels = Object.keys(skillScores);
+    const skillData = Object.values(skillScores);
     
     // Initialize chart
     document.addEventListener('DOMContentLoaded', function() {

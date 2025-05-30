@@ -268,7 +268,14 @@
                                         @endif
                                     </div>
                                     <div class="text-muted small">
-                                        {{ $question->category ? $question->category->name : 'Chưa phân loại' }} | 
+                                        @if(is_object($question->category))
+                                            {{ $question->category->name ?? 'Chưa phân loại' }}
+                                        @elseif(is_string($question->category))
+                                            {{ $question->category }}
+                                        @else
+                                            {{ $question->category_id ? App\Models\Category::find($question->category_id)->name : 'Chưa phân loại' }}
+                                        @endif
+                                        | 
                                         @if($question->difficulty == 1)
                                             <span class="text-success">Dễ</span>
                                         @elseif($question->difficulty == 2)

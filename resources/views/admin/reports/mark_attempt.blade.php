@@ -122,7 +122,14 @@
                                                         @endif
                                                     </div>
                                                     <div class="text-muted small">
-                                                        {{ $response->question->category ? $response->question->category->name : 'Chưa phân loại' }} | 
+                                                        @if(is_object($response->question->category))
+                                                            {{ $response->question->category->name ?? 'Chưa phân loại' }}
+                                                        @elseif(is_string($response->question->category))
+                                                            {{ $response->question->category }}
+                                                        @else
+                                                            {{ $response->question->category_id ? App\Models\Category::find($response->question->category_id)->name : 'Chưa phân loại' }}
+                                                        @endif
+                                                        | 
                                                         @if($response->question->difficulty == 'Dễ')
                                                             <span class="text-success">Dễ</span>
                                                         @elseif($response->question->difficulty == 'Trung bình')

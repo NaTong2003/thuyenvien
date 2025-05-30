@@ -54,11 +54,12 @@ class DashboardController extends Controller
         
         if (TestAttempt::where('user_id', $user->id)->count() > 0) {
             $skillScores = TestAttempt::join('tests', 'test_attempts.test_id', '=', 'tests.id')
+                            ->join('categories', 'tests.category_id', '=', 'categories.id')
                             ->where('test_attempts.user_id', $user->id)
-                            ->select('tests.category', DB::raw('AVG(test_attempts.score) as average_score'))
-                            ->groupBy('tests.category')
+                            ->select('categories.name', DB::raw('AVG(test_attempts.score) as average_score'))
+                            ->groupBy('categories.name')
                             ->get()
-                            ->pluck('average_score', 'category')
+                            ->pluck('average_score', 'name')
                             ->toArray();
         }
         

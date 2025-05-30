@@ -303,7 +303,15 @@
                                     </div>
                                     <div>
                                         @if($question->category)
-                                            <span class="small text-muted">Danh mục: {{ $question->category->name }}</span>
+                                            <span class="small text-muted">Danh mục: 
+                                                @if(is_object($question->category))
+                                                    {{ $question->category->name ?? 'Chưa phân loại' }}
+                                                @elseif(is_string($question->category))
+                                                    {{ $question->category }}
+                                                @else
+                                                    {{ $question->category_id ? App\Models\Category::find($question->category_id)->name : 'Chưa phân loại' }}
+                                                @endif
+                                            </span>
                                         @endif
                                     </div>
                                 </div>
